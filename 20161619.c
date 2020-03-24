@@ -1,165 +1,296 @@
-/*
-h[elp]
-d[ir]
-q[uit]
-hi[story]
-du[mp] [start, end]
-e[dit] address, value
-f[ill] start, end, value
-reset
-opcode mnemonic
-opcodelist
-*/
+
 #include <stdio.h>
 #include "20161619.h"
-int historyCount=0;
+int historyCount = 0;
 
-h_node head; 
-h_node createNode(){
+void updateHistory(char *command)
+{
     h_node temp;
-    temp = (h_node) malloc(sizeof(struct History_Node)); 
+    temp = (History_Node *)malloc(sizeof(History_Node) * 1);
     temp->n = historyCount;
     temp->next = NULL;
-    return temp; 
-}
-
-void insertNode(char *s){
-    h_node temp, p;
-    temp = createNode();
-    temp->s = (char*)malloc(sizeof(char)*strlen(s));
-    strcpy(temp->s,s); 
-    if(head==NULL){
+    temp->s = (char *)malloc(sizeof(char) * strlen(command));
+    strcpy(temp->s, command);
+    if (head == NULL)
+    {
         head = temp;
-    }else {
-         p = head;
-         while(p->next != NULL){
-             p = p-> next;
-         }
-         p->next = temp;
+        current = head;
     }
-    
-}
-
-int listdir(const char *path) {
-  struct dirent *entry;
-  DIR *dp;
-
-  dp = opendir(path);
-  if (dp == NULL) {
-    perror("opendir");
-    return -1;
-  }
-
-  while((entry = readdir(dp))){
-    printf("%s", entry->d_name);
-
-    if(entry->d_type == DT_DIR){
-        printf("/ ");
+    else
+    {
+        current->next = temp;
+        current = temp;
     }
-    
-    printf(" ");
-  }
-  printf("\n");
-  closedir(dp);
-  return 0;
 }
-void dump(){
-    printf("dumping..\n");
-}
-void updateHistory(char * command){
-    insertNode(command);
-}
-void showHistory(){
+
+void showHistory()
+{
     h_node temp;
     temp = head;
-    while(temp != NULL){
-        printf("%d %s\n", temp->n, temp->s);
-        temp = temp->next; 
+    while (temp != NULL)
+    {
+        printf("%d %s", temp->n, temp->s);
+        temp = temp->next;
     }
+    printf("\n");
 }
-void printAllCommands(){
-    printf("h[elp]\n");
-    printf("d[ir]\n");
-    printf("q[uit]\n"); 
-    printf("du[mp]\n");
-    printf("e[dit] address, value");
-    printf("f[ill] start, end, value\n");
-    printf("reset\n");
-    printf("opcode mnemonic\n");
-    printf("opcodelist\n");
-}
-int countSpace(char *s){
-    int count = 0;
-    for(int i = 0; i < strlen(s); i++){
-        if(s[i] == ' '){
-            count++;
-        }
-    }
-    return count; 
-}
-int getCommand(){
-    char command[100]; 
-    int wrongArg = 0; 
-    char * newStr; 
-    for(int i = 0 ; i <100; i++)
-        command[i]='\0';
-    
-    printf("sicsim> "); 
-    fgets(command,100,stdin);
-    if(countSpace(command)==0){
-        char * firstArg = strtok(command," ");
-        firstArg[strlen(firstArg)-1]=0;
-        if(strcmp(firstArg,"quit")==0 || strcmp(firstArg,"q")==0){
-            return QUIT;
-        }else if(strcmp(firstArg,"help") ==0 || strcmp(firstArg,"h")==0){
-            printAllCommands();
-        }else if(strcmp(firstArg,"dir")==0 || strcmp(firstArg,"d")==0){
-             listdir(".");
-        }else if(strcmp(firstArg,"history")==0|| strcmp(firstArg,"hi")==0){
-            updateHistory(command); 
-            historyCount++;
-            showHistory();
-            return RIGHT_COMMAND; 
-        }else {
-            wrongArg = 1; 
-        }
-    }
-    else if(countSpace(command)==1){
-       char * firstArg = strtok(command," ");
-       if(strcmp(firstArg,"dump")==0){  
-            char * secondArg = strtok(NULL," ");
-            char * n1 = strtok(secondArg,",");
-            char * n2 = strtok(NULL, " ");
-            int d1,d2;
-            if(n2=='\0'){
-                d1 = atoi(n1); 
-                if(d1!=0){
-                    printf("dump start %d\n", d1);
-                }else {
-                    printf("Illegal format : dump start [number]\n");
-                    wrongArg = 1;
-                }
-            }else {
-                d1 = atoi(n1);
-                d2 = atoi(n2);
-                if(d1!=0 && d2!=0){
-                  printf("dump start %d,end %d..\n", d1,d2);
-                }else{
-                  printf("Illegal format : dump start [number,number]\n");
-                  wrongArg = 1;
-                }
-            }        
-    }
-    }
-    if(wrongArg==0){
-        updateHistory(command); 
-        historyCount++;
-    }
-    
 
-  
-}
-int main(){
-    while(getCommand()!=QUIT){
+int listdir(const char *path)
+{
+    struct dirent *entry;
+    DIR *dp = NULL;
+    struct stat buf;
+    dp = opendir(path);
+    if (dp == NULL)
+    {
+        perror("opendir");
+        return -1;
     }
+    while ((entry = readdir(dp)))
+    {
+        printf("%s", entry->d_name);
+        lstat(entry->d_name, &buf);
+        if (S_ISDIR(buf.st_mode))
+        {
+            printf("/");
+        }
+        else if (S_IEXEC & buf.st_mode)
+        {
+            printf("*");
+        }
+        printf(" ");
+    }
+    printf("\n");
+    closedir(dp);
+    return 0;
+}
+
+void printAllCommands()
+{
+    printf("h[elp]\nd[ir]\nq[uit]\ndu[mp]\ne[dit] address, value\nf[ill] start, end, value\nreset\nopcode mnemonic\nopcodelist\n");
+}
+
+int isSingleInst()
+{
+    int instLength;
+    int j;
+    for (int i = 0; i < 10; i++)
+    {
+        instLength = strlen(singleInsts[i]);
+        if (strncmp(userInput, singleInsts[i], instLength) == 0)
+        {
+            for (j = instLength + 1; j < 100; j++)
+            {
+                if (userInput[j] != '\t' && userInput[j] != ' ' && userInput[j] != '\0')
+                {
+                    break;
+                }
+            }
+            if (j == 100)
+            {
+                strcpy(command, singleInsts[i]);
+                return 1;
+            }
+        }
+    }
+    return 0;
+}
+
+// return -1 if not true
+// number of parameters if true
+int isPluralInst()
+{
+    int instLength = 0;
+    for (int i = 0; i < 7; i++)
+    {
+        instLength = strlen(pluralInsts[i]);
+        if (strncmp(userInput, pluralInsts[i], instLength) == 0)
+        {
+            if (userInput[instLength] == ' ' || userInput[instLength] == '\t' || userInput[instLength] == '\0')
+            {
+                strcpy(command, pluralInsts[i]);
+                return 1;
+            }
+        }
+    }
+}
+void checkParams()
+{
+   
+}
+void printMem(long start, long end)
+{
+    long rowStart = start - start % 16;
+    long rowEnd = end - end % 16;
+    /// print out memory
+    for (long i = rowStart; i <= rowEnd; i += 16)
+    {
+        printf("%05lX\t", i);
+        for (long j = i; j < i + 16; j++)
+        {
+            if (j < start || j > end)
+            {
+                printf("  ");
+            }
+            else
+            {
+                int val = VMemory[j];
+                printf("%02X", val);
+            }
+            printf("  ");
+        }
+        printf("; ");
+        for (long j = i; j < i + 16; j++)
+        {
+            if (VMemory[j] >= 20 && VMemory[j] <= 0x7E)
+                printf("%c", VMemory[j]);
+            else
+                printf(".");
+        }
+        printf("\n");
+    }
+}
+void dump()
+{
+    long start, end, rowStart, rowEnd;
+    char *err;
+    checkParams();
+    if (numOfParams == 0)
+    {
+        if (defaultStartAddr >= MAX_MEMORY_SIZE)
+            defaultStartAddr = 0;
+        start = defaultStartAddr + 1;
+        end = start + (16 * 10 - 1);
+        defaultStartAddr = end;
+    }
+    else if (numOfParams == 1)
+    {
+        start = strtol(params[0], &err, 16);
+        end = start + (16 * 10 - 1);
+    }
+    else if (numOfParams == 2)
+    {
+        start = strtol(params[0], &err, 16);
+        end = strtol(params[1], &err, 16);
+    }
+    else
+    {
+        printf("Wrong parameter input\n");
+        return;
+    }
+    printMem(start, end);
+}
+
+void editMemory()
+{
+    checkParams();
+    char *err;
+    if (numOfParams == 2)
+    {
+        long address = strtol(params[0], &err, 16);
+        long value = strtol(params[1], &err, 16);
+        if (address < 0 || address >= MAX_MEMORY_SIZE)
+        {
+            printf("Memory out of bound\n");
+            return;
+        }
+        VMemory[address] = value;
+    }
+    else
+    {
+        printf("Wrong parameter input\n");
+        return;
+    }
+}
+
+void fillMemory()
+{
+    checkParams();
+    char *err;
+    if (numOfParams == 3)
+    {
+        long start = strtol(params[0], &err, 16);
+        long end = strtol(params[1], &err, 16);
+        long value = strtol(params[2], &err, 16);
+        if (start < 0 || end < 0 || start >= MAX_MEMORY_SIZE || end >= MAX_MEMORY_SIZE)
+        {
+            printf("Memory out of bound\n");
+            return;
+        }
+        else if (start > end)
+        {
+            printf("start address should be bigger than end address\n");
+        }
+        if (value > 0xFF)
+        {
+            printf("00~FF 사이의 값으로만 변경할 수 있습니다.\n");
+            return;
+        }
+        for (long i = start; i <= end; i++)
+        {
+            VMemory[i] = value;
+        }
+    }
+    else
+    {
+        printf("Wrong parameter input\n");
+        return;
+    }
+}
+
+int getCommand()
+{
+    int isRightArg = 1;
+    char *newStr;
+    for (int i = 0; i < 100; i++)
+        userInput[i] = '\0';
+    printf("sicsim> ");
+    fgets(userInput, 100, stdin);
+
+    if (isSingleInst())
+    {
+        historyCount++;
+        updateHistory(userInput);
+        if (strcmp(command, "quit") == 0 || strcmp(command, "q") == 0)
+        {
+            return QUIT;
+        }
+        else if (strcmp(command, "help") == 0 || strcmp(command, "h") == 0)
+        {
+            printAllCommands();
+        }
+        else if (strcmp(command, "dir") == 0 || strcmp(command, "d") == 0)
+        {
+            listdir(".");
+        }
+        else if (strcmp(command, "history") == 0 || strcmp(command, "hi") == 0)
+        {
+            showHistory();
+        }
+    }
+    else if (isPluralInst())
+    {
+        historyCount++;
+        updateHistory(userInput);
+        if (strcmp(command, "dump") == 0)
+        {
+        }
+    }
+    return 1;
+}
+int main()
+{
+
+    memset(VMemory, 0, sizeof(VMemory));
+    numOfParams = 3;
+    strcpy(params[0], "4");
+    strcpy(params[1], "10");
+    strcpy(params[2], "16");
+    fillMemory();
+    numOfParams=0;
+    dump();
+    while (getCommand() != QUIT)
+    {
+    }
+    return 0;
 }

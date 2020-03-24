@@ -1,13 +1,8 @@
-CC = gcc
-OBJ = main.o
-HEADER = 20161619.h 
-CFLAGS = -c -Wall  -Iinclude
+20161619.out : 20161619.o
+	gcc -o 20161619.out 20161619.o
 
-hello: $(OBJ) 
-    $(CC) $(OBJ) -o $@
+20161619.o : 20161619.h 20161619.c
 
-main.out: 20161619.c $(HEADER)
-    $(CC) $(CFLAGS) $< -o $@
-
-clean: 
-    rm -rf *o hello
+clean : 
+	rm 20161619.o
+	rm 20161619.out
