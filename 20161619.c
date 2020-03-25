@@ -40,8 +40,7 @@ int listdir(const char *path){
         lstat(entry->d_name, &buf);
         if (S_ISDIR(buf.st_mode)){
             printf("/");
-        }
-        else if (S_IEXEC & buf.st_mode) {
+        }else if (S_IEXEC & buf.st_mode) {
             printf("*");
         }
         printf(" ");
@@ -217,7 +216,7 @@ void printMem(long start, long end){
     long rowStart = start - start % 16;
     long rowEnd = end - end % 16;
     for (long i = rowStart; i <= rowEnd; i += 16) {
-        printf("%05lX\t", i);
+        printf("%05lX ", i);
         for (long j = i; j < i + 16; j++){
             if (j < start || j > end) {
                 printf("  ");
@@ -226,7 +225,7 @@ void printMem(long start, long end){
                 int val = VMemory[j];
                 printf("%02X", val);
             }
-            printf("  ");
+            printf(" ");
         }
         printf("; ");
         for (long j = i; j < i + 16; j++){
@@ -296,7 +295,7 @@ int editMemory(){
 }
 
 void resetMemory(){
-    memset(VMemory,0,sizeof(MAX_MEMORY_SIZE));
+    memset(VMemory, 0, sizeof(VMemory));
 }
 int fillMemory(){
     char *err;
@@ -394,6 +393,21 @@ int checkParamsMnemonic(){
     strcpy(targetMnemonic, tempM); 
     return SUCCESS;
 }
+
+void insertTableElement(int opcode, char * mnemonic, char * format ){
+    Table_Element *newElem = (Table_Element*) malloc(sizeof(Table_Element)); 
+    strcpy(newElem->mnemonic,mnemonic);
+    strcpy(newElem->format,format);
+    newElem->opcode = opcode;
+    int key = getHashKey(mnemonic);
+    if(HashTable[key]!=NULL){ //  해당 table key 의 첫 element 일 경우 
+        newElem->next = HashTable[key];
+        HashTable[key] = newElem;
+    }else { // 이미 key에 element가 존재할때 
+        HashTable[key] = newElem;
+        newElem->next = NULL; 
+    }
+}
 int getCommand()
 {
     int i; 
@@ -441,20 +455,6 @@ int getCommand()
     return 1;
 }
 
-void insertTableElement(int opcode, char * mnemonic, char * format ){
-    Table_Element *newElem = (Table_Element*) malloc(sizeof(Table_Element)); 
-    strcpy(newElem->mnemonic,mnemonic);
-    strcpy(newElem->format,format);
-    newElem->opcode = opcode;
-    int key = getHashKey(mnemonic);
-    if(HashTable[key]!=NULL){ //  해당 table key 의 첫 element 일 경우 
-        newElem->next = HashTable[key];
-        HashTable[key] = newElem;
-    }else { // 이미 key에 element가 존재할때 
-        HashTable[key] = newElem;
-        newElem->next = NULL; 
-    }
-}
 
 int main()
 {
@@ -475,7 +475,7 @@ int main()
         insertTableElement(opcode,mnemonic,format); 
 
     }
-    memset(VMemory, 0, sizeof(VMemory));
+    resetMemory();
     while (getCommand() != QUIT) {
     }
     return 0;
