@@ -166,7 +166,6 @@ int checkParams(){ // return 0 for incorrect parameter
            }
        
        numOfParams = 1; 
-       printf("copied %s to params\n", input);
        strcpy(params[0],input);
    }
 
@@ -192,7 +191,6 @@ int checkParams(){ // return 0 for incorrect parameter
            }
        }
        numOfParams = 2; 
-       printf("copied %s to params\n", input);
        strcpy(params[1],input);
    }
 
@@ -216,7 +214,6 @@ int checkParams(){ // return 0 for incorrect parameter
            }
        }
        numOfParams = 3; 
-       printf("copied %s to params\n", input);
        strcpy(params[2],input);
    }
    return 1; 
@@ -330,6 +327,7 @@ void resetMemory(){
 int fillMemory()
 {
     char *err;
+    printf("I am here\n");
     if (numOfParams == 3)
     {
         long start = strtol(params[0], &err, 16);
@@ -353,16 +351,37 @@ int fillMemory()
         for (long i = start; i <= end; i++)
         {
             VMemory[i] = value;
-            return 1;
         }
+        return 1;
     }
     else
     {
         printf("Wrong parameter input\n");
         return 0;
     }
+    return 1;
 }
-
+void showOpcode(){
+    for(int i = 0; i < MAX_HASH_SIZE ; i++) {
+        Table_Element *elem = HashTable[i];
+        printf("%d :",i);
+        if(HashTable[i] == NULL) {
+            printf("\n");
+            continue;
+        }
+        while(elem != NULL) {
+            printf(" [%s,%02X]",elem->mnemonic,elem->opcode);
+            if(elem->next != NULL) {
+                printf(" ->");
+            }
+            elem = elem->next;
+        }
+        printf("\n");
+    }
+}
+int opcode(){
+    return 0;
+}
 int getCommand()
 {
     int isRightArg = 1;
@@ -396,21 +415,22 @@ int getCommand()
             showHistory();
         }else if(strcmp(command,"reset")==0){
             resetMemory(); 
+        }else if(strcmp(command,"opcodelist")==0){
+            showOpcode(); 
         }
     }
     else if (isPluralInst())
     {
         instLength = strlen(command); 
-        printf("inst Length : %d\n", instLength);
         if ((strcmp(command, "dump") == 0 || strcmp(command, "du") == 0) && checkParams())
         {
             successful = dumpMemory();
         }else if((strcmp(command, "edit") == 0 || strcmp(command, "e") == 0) && checkParams()){
             successful = editMemory();
-        }else if((strcmp(command, "fil") == 0 || strcmp(command, "f") == 0)  && checkParams()){
+        }else if((strcmp(command, "fill") == 0 || strcmp(command, "f") == 0)  && checkParams()){
             successful = fillMemory();
         }else if(strcmp(command, "opcode") == 0){
-            checkParams();
+            successful = opcode();
             printf("opcode..\n"); 
         }
     }
@@ -420,9 +440,60 @@ int getCommand()
     }
     return 1;
 }
+
+
+int getHashKey(char *mnemonic) {
+    //mnemonic의 첫글자와 마지막글자를 20으로 나눈 나머지를 키값으로 설정한다.
+    long len = strlen(mnemonic);
+    int key = mnemonic[0] + mnemonic[len-1];
+    return key%20;
+}
+
+void insertTableElement(int opcode, char * mnemonic, char * format ){
+    Table_Element *newElem = (Table_Element*) malloc(sizeof(Table_Element)); 
+    strcpy(newElem->mnemonic,mnemonic);
+    strcpy(newElem->format,format);
+    newElem->opcode = opcode;
+    int key = getHashKey(mnemonic);
+    if(HashTable[key]!=NULL){ //  해당 table key 의 첫 element 일 경우 
+        newElem->next = HashTable[key];
+        HashTable[key] = newElem;
+    }else { // 이미 key에 element가 존재할때 
+        HashTable[key] = newElem;
+        newElem->next = NULL; 
+    }
+}
+int searchMnemnic(char * mnemonic){
+    int key = getHashKey(mnemonic); 
+    Table_Element *find_node = HashTable[key];
+    while(find_node != NULL) {
+        if(strcmp(find_node->mnemonic,mnemonic) == 0)
+            return find_node->opcode;
+        find_node = find_node->next;
+    }
+    //while문에서 찾지 못한 경우 -1 리턴
+    return -1;
+}
 int main()
 {
+    FILE * ip;
+    int opcode;
+    char mnemonic[10];
+    char format[10];
+    char *err;
+    ip = fopen("opcode.txt","r");
+    if(ip==NULL){
+        printf("opcode file does not exist\n");
+        return 0;
+    }
+    while(1){
+        fscanf(ip,"%X%s%s", &opcode, mnemonic, format);
+        if(feof(ip))
+            break;
+        insertTableElement(opcode,mnemonic,format); 
 
+    }
+    showOpcode();
     memset(VMemory, 0, sizeof(VMemory));
     while (getCommand() != QUIT)
     {
