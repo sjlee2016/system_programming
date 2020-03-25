@@ -6,6 +6,17 @@
 #define QUIT 0
 #define MAX_MEMORY_SIZE 1048576 // 1 MB memory 
 #define MAX_HASH_SIZE 20
+#define MAX_USER_INPUT 100
+#define ERROR 0; 
+#define SUCCESS 1; 
+
+const int ERROR_PARAMETER = -1;
+const int ERROR_ADDRESS_OUT_OF_BOUND = -2;
+const int ERROR_INPUT_FORMAT = -3;
+const int ERROR_PARAMETER_LENGTH = -4 ;
+const int ERROR_PARAMETER_OUT_OF_BOUND = -5; 
+const int ERROR_PARAMETER_NOT_HEX = -6 ;
+
 unsigned char VMemory [MAX_MEMORY_SIZE]; 
 char params[3][10]; 
 int numOfParams=0;
@@ -30,11 +41,11 @@ h_node head;
 h_node current;
 
 int historyCount = 0;
-int hashSize = 0; 
 char singleInsts [10][10] = {"help", "h", "dir", "d", "history","hi","quit","q", "reset","opcodelist"};
 char pluralInsts[7][10] = {"dump","du","edit","e","fill","f","opcode"};
 char userInput[100]; 
-char command[10];
+char command[11];
+char targetMnemonic[7];
 void updateHistory(char *command);
 void showHistory();
 int listdir(const char *path);
@@ -51,5 +62,6 @@ int create_hash(int opcode, char * mnemonic, char * format);
 void resetMemory();
 int fillMemory();
 void showOpcode();
-int opcode();
+int getOpcode();
 int getCommand();
+int getHashKey(char * mnemonic);
