@@ -21,6 +21,7 @@ char params[3][10];
 int numOfParams=0;
 long defaultStartAddr = -1; 
 int instEndInx = 0; 
+int instLength = 0;
 typedef struct History_Node * h_node;
 typedef struct History_Node{ 
     char * s; 
@@ -29,8 +30,9 @@ typedef struct History_Node{
 }History_Node;
 h_node head; 
 h_node current;
+int historyCount = 0;
 char singleInsts [10][10] = {"help", "h", "dir", "d", "history","hi","quit","q", "reset","opcodelist"};
-char pluralInsts[7][6] = {"dump","du","edit","e","fill","f","opcode"};
+char pluralInsts[7][10] = {"dump","du","edit","e","fill","f","opcode"};
 char userInput[100]; 
 char command[10];
 void updateHistory(char *command);
