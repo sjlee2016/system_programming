@@ -1,93 +1,90 @@
 #include <stdio.h>
 #include "20161619.h"
 void updateHistory(char *command){
-    h_node temp = (History_Node *)malloc(sizeof(History_Node) * 1);
-    temp->n = historyCount;
+    h_node temp = (History_Node *)malloc(sizeof(History_Node) * 1); // allocate history node
+    temp->n = historyCount; // store current number of history stored into n 
     temp->next = NULL;
-    temp->s = (char *)malloc(sizeof(char) * strlen(command));
-    command[strlen(command)-1]='\0';
-    strcpy(temp->s, command);
-    if (head == NULL){
-        head = temp;
+    temp->s = (char *)malloc(sizeof(char) * strlen(command)); // dynamically allocate char array 
+    command[strlen(command)-1]='\0'; // store null value at the end of the array
+    strcpy(temp->s, command); // copy command to s 
+    if (head == NULL){ // if there is no previous history node stored
+        head = temp; // update head and current
         current = head;
     }
     else{
-        current->next = temp;
+        current->next = temp; // otherwise add the new node to the linked list
         current = temp;
     }
 }
 
 void showHistory(){
     h_node temp;
-    temp = head;
-    while (temp != NULL){
-        printf("%d %s\n", temp->n, temp->s);
+    temp = head; 
+    while (temp != NULL){ // starting from head node, until it reaches the end
+        printf("%d %s\n", temp->n, temp->s); // print out the history info
         temp = temp->next;
     }
 }
 
 int listdir(const char *path){
-    struct dirent *entry;
-    DIR *dp = NULL;
+    struct dirent *ent;
     struct stat buf;
-    dp = opendir(path);
-    if (dp == NULL) {
-        perror("opendir");
-        return -1;
+    DIR *dp = opendir(path);
+    if (dp == NULL) { // print error if directory cannot be opened 
+        printf("directory cannot be opened\n");
+        return ERROR;
     }
-    while ((entry = readdir(dp))) {
-        printf("%s", entry->d_name);
-        lstat(entry->d_name, &buf);
-        if (S_ISDIR(buf.st_mode)){
+    while ((ent = readdir(dp))) { // read the directory 
+        printf("%s", ent->d_name); // print out the name of the file 
+        lstat(ent->d_name, &buf);
+        if (S_ISDIR(buf.st_mode)){ // if the file is a folder 
             printf("/");
-        }else if (S_IEXEC & buf.st_mode) {
-            printf("*");
+        }else if (buf.st_mode & S_IEXEC ){ // if the file is output file
+            printf("*");   
         }
         printf(" ");
     }
-    printf("\n");
-    closedir(dp);
+    printf("\n"); 
+    closedir(dp); // close the directory
     return 0;
 }
 
-void printAllCommands(){
+void printAllCommands(){ // print out all the commands
     printf("h[elp]\nd[ir]\nq[uit]\ndu[mp]\ne[dit] address, value\nf[ill] start, end, value\nreset\nopcode mnemonic\nopcodelist\n");
 }
 
-int isSingleInst(){
-    int j;
-    int flag = 0;
-    int found = 0; 
-    for (int i = 0; i < 10; i++) {
-        flag = 0;
-        instLength = strlen(singleInsts[i]);
-        if (strncmp(userInput, singleInsts[i], instLength) == 0){
-            for (j = instLength; j < MAX_USER_INPUT; j++) {
-                if (userInput[j] != '\t' && userInput[j] != ' ' && userInput[j] != '\0' &&  userInput[j] != '\n'){
-                    flag = 1;
+int isSimpleInst(){
+    int i,j,flag,found = 0;
+    for (i = 0; i < 10; i++) { // loop through simple instruction list to find out it matches the user input 
+        flag = 0; // initialize flag value
+        instLength = strlen(simpleInsts[i]); // get the length of the instruction 
+        if (strncmp(userInput, simpleInsts[i], instLength) == 0){ // if user input contains the following instruction
+            for (j = instLength; j < MAX_USER_INPUT; j++) { // loop through the rest of user input
+                if (!isEmpty(userInput[j])){ // if other non empty character exists 
+                    flag = 1; // flag is set to show that the user input is not the following instruction 
                     break;
                 }
             }
-            if(flag == 0){
-                strcpy(command, singleInsts[i]);   
-                found = 1; 
+            if(flag == 0){ // if the user input contains only the instruction
+                strcpy(command, simpleInsts[i]);    // copy the instruction to command
+                found = 1;  // set found to 1 
                 flag = 0;  
             }
         }
     }
-    if(found){
-        return SUCCESS;
+    if(found){ // if the user input is simple instruction in the right format
+        return SUCCESS; // return 1
     }else
-        return ERROR;
+        return ERROR; // return 0 otherwise 
 }
 
 int isEmpty(char c){
-    return (c== ' ' || c == '\t' || c == '\0' || c == '\n'); 
+    return (c== ' ' || c == '\t' || c == '\0' || c == '\n'); // if the character is one of the following, it is identified to be empty  
 }
 int isHexadecimal(char c){
- return ('0' <= c && c <= '9' ) || ('A' <= c && c  <= 'F') || ('a' <= c && c <= 'f'); 
+ return ('0' <= c && c <= '9' ) || ('A' <= c && c  <= 'F') || ('a' <= c && c <= 'f'); // returns 1 if the character is in hexadecimal
 }
-void printErrorMessage(int type){
+void printErrorMessage(int type){ // print out error message for specific type 
     switch(type){
         case ERROR_PARAMETER : printf("Wrong parameter given..\n"); break;
         case ERROR_ADDRESS_OUT_OF_BOUND : printf("Address out of bound..\n"); break; 
@@ -98,14 +95,14 @@ void printErrorMessage(int type){
     }
 }
 
-int isPluralInst(){
+int isComplexInst(){
     instLength = 0;
     for (int i = 0; i < 7; i++){
-        instLength = strlen(pluralInsts[i]);
-        if (strncmp(userInput, pluralInsts[i], instLength) == 0) {
+        instLength = strlen(complexInsts[i]);
+        if (strncmp(userInput, complexInsts[i], instLength) == 0) {
             if (isEmpty(userInput[instLength]))
             { 
-                strcpy(command, pluralInsts[i]);
+                strcpy(command, complexInsts[i]);
                 return 1;
             }
         }   
@@ -236,6 +233,25 @@ void printMem(long start, long end){
         }
         printf("\n");
     }
+}
+void cleanEmptyStr(){
+    char temp[MAX_USER_INPUT]; 
+    int i,j;
+    for(i = 0 ; i < MAX_USER_INPUT; i++)
+        temp[i] = ' ';
+    for(i = 0 ; i < MAX_USER_INPUT; i++){
+        if(!(isEmpty(userInput[i]))){
+            break;
+        }
+    }
+    for(j = 0; j < MAX_USER_INPUT; j++){
+        temp[j] = userInput[j+i]; 
+    }
+
+     for(i = 0 ; i < MAX_USER_INPUT; i++)
+        userInput[i] = ' ';
+
+    strcpy(userInput,temp); 
 }
 int dumpMemory(){
     long start, end, rowStart, rowEnd;
@@ -416,7 +432,8 @@ int getCommand()
         userInput[i] = '\0';
     printf("sicsim> ");
     fgets(userInput, MAX_USER_INPUT, stdin);
-    if (isSingleInst()) {
+    cleanEmptyStr();
+    if (isSimpleInst()) {
         historyCount++;
         updateHistory(userInput);
         if (strcmp(command, "quit") == 0 || strcmp(command, "q") == 0){
@@ -436,7 +453,7 @@ int getCommand()
             showOpcode(); 
         }
     }
-    else if (isPluralInst()){
+    else if (isComplexInst()){
         instLength = strlen(command); 
         if ((strcmp(command, "dump") == 0 || strcmp(command, "du") == 0) && checkParams()){
             successful = dumpMemory();
