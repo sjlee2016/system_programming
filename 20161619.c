@@ -210,217 +210,226 @@ int checkParams(){
 }
 
 void printMem(long start, long end){
-    long rowStart = start - start % 16;
-    long rowEnd = end - end % 16;
-    for (long i = rowStart; i <= rowEnd; i += 16) {
-        printf("%05lX ", i);
-        for (long j = i; j < i + 16; j++){
-            if (j < start || j > end) {
-                printf("  ");
+    long rowStart = start - start % 16; // calculate the first row address 
+    long rowEnd = end - end % 16; // calulcate the last row address
+    int value; 
+    long i,j;
+    for (i = rowStart; i <= rowEnd; i += 16) { // loop through rowStart until rowEnd, each incrementing by 16 
+        printf("%05lX ", i); 
+        for (j = i; j < i + 16; j++){
+            if (j >= start && j <= end) { // if the address is within the start and end address
+                value = VMemory[j];  // print out the memory 
+                printf("%02X", value);
             }
             else{
-                int val = VMemory[j];
-                printf("%02X", val);
+                printf("  "); // print out empty space otherwise
             }
             printf(" ");
         }
         printf("; ");
-        for (long j = i; j < i + 16; j++){
-            if (VMemory[j] >= 20 && VMemory[j] <= 0x7E)
-                printf("%c", VMemory[j]);
+        for (j = i; j < i + 16; j++){
+            if (VMemory[j] >= 20 && VMemory[j] <= 0x7E) // if the value is within the range
+                printf("%c", VMemory[j]); // print out the memory in character value 
             else
-                printf(".");
+                printf("."); // print dot otherwise
         }
         printf("\n");
     }
 }
-void cleanEmptyStr(){
-    char temp[MAX_USER_INPUT]; 
+void cleanEmptyStr(){ // converts userInput so it starts with non-empty character 
+    char temp[MAX_USER_INPUT]; // create temporary array
     int i,j;
-    for(i = 0 ; i < MAX_USER_INPUT; i++)
+    for(i = 0 ; i < MAX_USER_INPUT; i++) // initialize temp with empty character
         temp[i] = ' ';
-    for(i = 0 ; i < MAX_USER_INPUT; i++){
-        if(!(isEmpty(userInput[i]))){
+
+    for(i = 0 ; i < MAX_USER_INPUT; i++){ // loop through user input
+        if(!(isEmpty(userInput[i]))){ // break if non-empty character 
             break;
         }
     }
+
+    if(i==MAX_USER_INPUT) // if the entire string is empty, return 
+        return;
+
     for(j = 0; j < MAX_USER_INPUT; j++){
-        temp[j] = userInput[j+i]; 
+        if(j+i<MAX_USER_INPUT)
+           temp[j] = userInput[j+i]; // copy the content of userInput to temp, starting index of the first non-empty character
     }
 
-     for(i = 0 ; i < MAX_USER_INPUT; i++)
+     for(i = 0 ; i < MAX_USER_INPUT; i++) // erase the previous userInput
         userInput[i] = ' ';
 
-    strcpy(userInput,temp); 
+    strcpy(userInput,temp);  // copy the temp content to userInput
 }
 int dumpMemory(){
     long start, end, rowStart, rowEnd;
     char *err;
-    if (numOfParams == 0) {
-        if (defaultStartAddr >= MAX_MEMORY_SIZE)
-            defaultStartAddr = 0;
-        start = defaultStartAddr + 1;
-        end = start + (16 * 10 - 1);
-        defaultStartAddr = end;
+    if (numOfParams == 0) { // if no parameter is given
+        if (defaultStartAddr >= MAX_MEMORY_SIZE-1) // set defaultStartAddr to -1 if it exceeds MAX_MEMORY_SIZE 
+            defaultStartAddr = -1;
+        start = defaultStartAddr + 1;  // increment start value 
+        end = start + (16 * 10 - 1); // set the end address to be 159 bigger than start addresss
+        defaultStartAddr = end; // update global variable
     }
-    else if (numOfParams == 1){
-        start = strtol(params[0], &err, 16);
-        end = start + (16 * 10 - 1);
+    else if (numOfParams == 1){ // if one parameter is given
+        start = strtol(params[0], &err, 16); // set start address to the given parameter
+        end = start + (16 * 10 - 1); 
     }
-    else if (numOfParams == 2) {
-        start = strtol(params[0], &err, 16);
-        end = strtol(params[1], &err, 16);
+    else if (numOfParams == 2) { // if two parameters are given
+        start = strtol(params[0], &err, 16); // set start
+        end = strtol(params[1], &err, 16); // set end address 
     }
     else{
-         printErrorMessage(ERROR_INPUT_FORMAT);
+         printErrorMessage(ERROR_INPUT_FORMAT); // if more than two parameters are given, print out error message
          return ERROR;
     }
-    if(end >= MAX_MEMORY_SIZE){
-        end = MAX_MEMORY_SIZE-1; 
+    if(end >= MAX_MEMORY_SIZE){ // if end address is bigger than MAX memory size
+        end = MAX_MEMORY_SIZE-1;  // set end address to the end memory address
     }
-    if(start > MAX_MEMORY_SIZE || start < 0 ){
+    if(start > MAX_MEMORY_SIZE || start < 0 ){ // print error message if start is bigger than max memory or less than zero
        printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
        return ERROR;
     }
-    if(start > end ){
+    if(start > end ){ // print error message if start is bigger than end 
        printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
        return ERROR;
     }
-    printMem(start, end);
+    printMem(start, end); // print out memory 
     return SUCCESS; 
 }
 
 int editMemory(){
     char *err;
-    if (numOfParams == 2) {
-        long address = strtol(params[0], &err, 16);
+    if (numOfParams == 2) { // if two parameter values are given
+        long address = strtol(params[0], &err, 16); // convert each parameter to long type
         long value = strtol(params[1], &err, 16);
-        if (address < 0 || address > MAX_MEMORY_SIZE-1){
+        if (address < 0 || address > MAX_MEMORY_SIZE-1){ // print error message if address is out of bound 
             printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
             return ERROR;
-        }else if(value > 0xFF){
+        }else if(value > 0xFF){ // print out error message if value is out of bound 
               printErrorMessage(ERROR_PARAMETER_OUT_OF_BOUND);
               return ERROR;
         }
-        VMemory[address] = value;
+        VMemory[address] = value; // change memory to the value 
         return SUCCESS; 
     }else{
-        printErrorMessage(ERROR_PARAMETER);
+        printErrorMessage(ERROR_PARAMETER); // if wrong number of parameter is given 
         return ERROR;
     }
 }
 
 void resetMemory(){
-    memset(VMemory, 0, sizeof(VMemory));
+    memset(VMemory, 0, sizeof(VMemory)); // reset all virtual memory to zero
 }
 int fillMemory(){
     char *err;
-    if (numOfParams == 3){
+    if (numOfParams == 3){ // if three parameters are given 
         long start = strtol(params[0], &err, 16);
-        long end = strtol(params[1], &err, 16);
+        long end = strtol(params[1], &err, 16); // convert three parameters into long type
         long value = strtol(params[2], &err, 16);
-        if (start < 0 || end < 0 || start >= MAX_MEMORY_SIZE || end >= MAX_MEMORY_SIZE) {
-            printf("Memory out of bound\n");
-            return 0;
+        if (start < 0 || end < 0 || start >= MAX_MEMORY_SIZE || end >= MAX_MEMORY_SIZE) { // print out error if address is not in range 
+            printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
+            return ERROR;
         }
         else if (start > end){
             printf("start address should be bigger than end address\n");
             return 0;
         }
         if (value > 0xFF){
-            printf("You can only change with a value within the range of 00~FF.\n");
+            printErrorMessage(ERROR_PARAMETER_OUT_OF_BOUND);
             return 0;
         }
-        for (long i = start; i <= end; i++){
+        for (long i = start; i <= end; i++){ // update the memory value from start to end address 
             VMemory[i] = value;
         }
-        return 1;
+        return SUCCESS;
     }
-    else{
-        printf("Wrong parameter input\n");
-        return 0;
+    else{ 
+        printErrorMessage(ERROR_PARAMETER); // if wrong number of parameter is given 
+        return ERROR;
     }
-    return 1;
+    
 }
-void showOpcode(){
-    for(int i = 0; i < MAX_HASH_SIZE ; i++) {
-        Table_Element *elem = HashTable[i];
+void showOpcode(){ // print out all opcodes from hash table
+    for(int i = 0; i < MAX_HASH_SIZE ; i++) { // loop through hash table
+        Table_Element *elem = HashTable[i]; // get table element from hash table[i] 
         printf("%d :",i);
-        if(elem == NULL) {
+        if(elem == NULL) { // if the following table is empty, skip
             printf("\n");
             continue;
         }
-        while(elem != NULL) {
-            printf(" [%s,%02X]",elem->mnemonic,elem->opcode);
-            if(elem->next != NULL) {
+        while(elem != NULL) { // loop through the element until it points to null 
+            printf(" [%s,%02X]",elem->mnemonic,elem->opcode); // print out the mnemonic and opcode of the table element
+            if(elem->next != NULL) { // print arrow if next element exists
                 printf(" ->");
             }
-            elem = elem->next;
+            elem = elem->next; // continue to next pointer
         }
         printf("\n");
     }
 }
 
-int getHashKey(char * mnemonic) {
-    int key = mnemonic[0] + mnemonic[strlen(mnemonic)];
+int getHashKey(char * mnemonic) { // returns the hash key for the following mnemonic
+    int key = mnemonic[0] + mnemonic[strlen(mnemonic)-1];
     return key%MAX_HASH_SIZE;
 }
 
-int getOpcode(){
-    int key = getHashKey(targetMnemonic); 
-    for(Table_Element *temp = HashTable[key]; temp != NULL; temp = temp -> next) {
-        if(strcmp(temp->mnemonic,targetMnemonic) == 0){
-            printf("opcode is %X\n", temp->opcode);
+int getOpcode(){  // prints out opcode for the target mnemonic
+    int key = getHashKey(targetMnemonic);  // finds hashkey 
+    for(Table_Element *temp = HashTable[key]; temp != NULL; temp = temp -> next) { // loop through the following hash table
+        if(strcmp(temp->mnemonic,targetMnemonic) == 0){ // if target mnemonic is found 
+            printf("opcode is %X\n", temp->opcode); // print out the opcode
             return SUCCESS;
         }
     }
-    printf("opcode is not found for %s\n", targetMnemonic);
+    printf("opcode is not found for %s\n", targetMnemonic); // if not found
     return ERROR;
 }
 int checkParamsMnemonic(){
-    char tempM[7];
-    memset(tempM,0,sizeof(tempM));
+    char tempM[10]; 
+    memset(tempM,0,sizeof(tempM)); // intialize 
     int i,idx = 0;
     int lastIndex = 0;
     int flag = 0;
-    for(i = 6; i < MAX_USER_INPUT-1; i++){
-        if(userInput[i]>='A'&&userInput[i]<='Z'){
-            if(idx>=6){
-                return ERROR;
-            }
-            tempM[idx++] = userInput[i]; 
+    for(i = 6; i < MAX_USER_INPUT; i++){ // loop through the rest of user input after 'opcode' 
+        if(idx==10){
+            printf("Opcode should not be longer than 9 letter\n");
+            return ERROR; 
+        }
+        if(userInput[i]>='A'&&userInput[i]<='Z'){ // if the character is a capital letter
+            tempM[idx++] = userInput[i];  // copy the letter to tempM
             flag = 1;
-        }else if(!(isEmpty(userInput[i]))){
-            printf("opcode should be in capital letter\n");
+        }else if(!(isEmpty(userInput[i]))){ // if the character is not in capital letter 
+            printf("opcode should be in capital letter\n"); // print error message
             return ERROR;
         }
         if(flag){
-            if(isEmpty(userInput[i]))
+            if(isEmpty(userInput[i])) // if there has been a letter and currently it is empty, break 
                 break;
         }
     }
-    for(int j = i; j < MAX_USER_INPUT-1; j++) {
-        if(!(isEmpty(userInput[j]))){
-            printf("wrong input\n");
+    for(int j = i; j < MAX_USER_INPUT; j++) { // loop through to make sure the rest of the string is empty after the mnemonic
+        if(!(isEmpty(userInput[j]))){  // if other characters exist after mnemonic
+            printErrorMessage(ERROR_INPUT_FORMAT);
             return ERROR;
         }
     }
-    strcpy(targetMnemonic, tempM); 
+    strcpy(targetMnemonic, tempM); // copy tempM to targetMnemonic
     return SUCCESS;
 }
 
 void insertTableElement(int opcode, char * mnemonic, char * format ){
-    Table_Element *newElem = (Table_Element*) malloc(sizeof(Table_Element)); 
-    strcpy(newElem->mnemonic,mnemonic);
+    Table_Element *newElem = (Table_Element*) malloc(sizeof(Table_Element)); // allocate new table element
+    strcpy(newElem->mnemonic,mnemonic); // copy mnemonic and format string
     strcpy(newElem->format,format);
     newElem->opcode = opcode;
-    int key = getHashKey(mnemonic);
-    if(HashTable[key]!=NULL){ //  해당 table key 의 첫 element 일 경우 
-        newElem->next = HashTable[key];
-        HashTable[key] = newElem;
-    }else { // 이미 key에 element가 존재할때 
-        HashTable[key] = newElem;
-        newElem->next = NULL; 
+    int key = getHashKey(mnemonic); // get hash key for the following mnemonic
+    if(HashTable[key]!=NULL){ //  if the element is not the first element to be inserted into the table with the specific hash key 
+        newElem->next = HashTable[key]; // point to the current head 
+        HashTable[key] = newElem; // update the head to new node
+    }else { // if it is the first element
+        HashTable[key] = newElem;  // update head node 
+        newElem->next = NULL;  // point to null 
     }
 }
 int getCommand()
@@ -477,22 +486,22 @@ int main()
     FILE * ip;
     int opcode;
     char mnemonic[7];
-    char format[5];
+    char format[5];  // temporary storage for storing opcode info 
     char *err;
     ip = fopen("opcode.txt","r");
-    if(ip==NULL){
+    if(ip==NULL){ // print error message if opcode text file is not found 
         printf("opcode file does not exist\n");
         return 0;
     }
     while(1){
-        fscanf(ip,"%X%s%s", &opcode, mnemonic, format);
-        if(feof(ip))
+        fscanf(ip,"%X%s%s", &opcode, mnemonic, format); // read each line from opcode text file
+        if(feof(ip)) // break if reached end of file
             break;
-        insertTableElement(opcode,mnemonic,format); 
+        insertTableElement(opcode,mnemonic,format); // insert opcode info into hash table
 
     }
-    resetMemory();
-    while (getCommand() != QUIT) {
+    resetMemory(); // initialize virtual memory 
+    while (getCommand() != QUIT) { // get command from user and process, until quit command is given 
     }
     return 0;
 }
