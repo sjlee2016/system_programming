@@ -97,114 +97,114 @@ void printErrorMessage(int type){ // print out error message for specific type
 
 int isComplexInst(){
     instLength = 0;
-    for (int i = 0; i < 7; i++){
-        instLength = strlen(complexInsts[i]);
-        if (strncmp(userInput, complexInsts[i], instLength) == 0) {
-            if (isEmpty(userInput[instLength]))
+    for (int i = 0; i < 7; i++){ // loop through complex instruction list
+        instLength = strlen(complexInsts[i]); // get length of the instruction 
+        if (strncmp(userInput, complexInsts[i], instLength) == 0) { // if the user input includes following instruction
+            if (isEmpty(userInput[instLength])) // check if the next character is empty
             { 
-                strcpy(command, complexInsts[i]);
-                return 1;
+                strcpy(command, complexInsts[i]); // copy the instruction to command
+                return SUCCESS; 
             }
         }   
     }
-    return 0; 
+    return 0;  
 }
-int checkParams(){ // return 0 for incorrect parameter 
-   int n_comma = 0 ;
+int checkParams(){ 
+   int comma = 0; 
    char input[10] = "";
    int paramLength = 0 ; 
    int last = 0;
    int idx1,idx2,idx3,i;
-   for(i  = instLength; i < MAX_USER_INPUT; i++){
+   for(i  = instLength; i < MAX_USER_INPUT; i++){ // search the string after the instruction 
        if(userInput[i]==','){
-            n_comma++;
-            if(n_comma==1){
-                idx1=i;  // 1,2
-             } else if(n_comma==2){
-                idx2=i;  // 1,2,3
-             }else {
-                return ERROR;  // 1,2,3,..,
+            comma++; // keep track of number of comma in user input
+            if(comma==1){  
+                idx1=i;  // store the location of the first comma in idx1 eg) 1,2    
+             } else if(comma==2){ // if there is 2 commas 
+                idx2=i;  // store the location of second comma in idx2 eg) 1,2,3
+             }else {  // returns 0 because there should not be more than 3 commas 
+                return ERROR;  // eg) 1,2,3,4
              }
        }
    }
-   if(n_comma == 0 && (strncmp(userInput,"du",2)==0 || strncmp(userInput,"dump",4)==0)){
+   if(comma == 0 && (strncmp(userInput,"du",2)==0 || strncmp(userInput,"dump",4)==0)){ // for dump without any parameter
        for( i = instLength; i < MAX_USER_INPUT; i++){
-           if(!isEmpty(userInput[i])){
+           if(!isEmpty(userInput[i])){ // check the rest of string 
                 break;
            }
        }
-       if(i==MAX_USER_INPUT){
-        numOfParams = 0;
-        return SUCCESS; 
+       if(i==MAX_USER_INPUT){ // if the string only contains dump 
+        numOfParams = 0; // update numOfParams and return success code 
+        return SUCCESS;  
        }
    }
-   if(n_comma>=0){
+   if(comma>=0){ // initial start 
        last = 0; 
        for(i = instLength; i<MAX_USER_INPUT; i++){
-           if(userInput[i]=='\0' || userInput[i]==','){
+           if(userInput[i]=='\0' || userInput[i]==','){ // skip if there is second comma or it's end of string
                break;
            }
-             if(!(isEmpty(userInput[i]))){
-              if(isHexadecimal(userInput[i])){
-                  
-                input[last++] += userInput[i]; 
-                if(last>9){
+             if(!(isEmpty(userInput[i]))){ 
+              if(isHexadecimal(userInput[i])){   
+                input[last++] += userInput[i]; // store the parameter into input 
+                if(last>9){ // if parameter is too long print out error message 
                    printErrorMessage(ERROR_PARAMETER_LENGTH);
                    return ERROR; 
                 }
-              }else{
-                  printErrorMessage(ERROR_INPUT_FORMAT);
+              }else{  // if non-hexadecimal is given as parameter, print out error
+                  printErrorMessage(ERROR_INPUT_FORMAT); 
                   return ERROR;
               }
              }
            } 
-       numOfParams = 1; 
-       strcpy(params[0],input);
+       numOfParams = 1; // update numOfParams  
+       strcpy(params[0],input); // store first parameter to params 
    }
-   if(n_comma>=1){
-       memset(input,0,sizeof(input));
+   if(comma>=1){ // if there is at least one comma 
+       memset(input,0,sizeof(input)); // initialize input array and last 
        last = 0;  
-        for(i = idx1+1; i<MAX_USER_INPUT; i++){
-           if(userInput[i]=='\0' || userInput[i]==','){
+        for(i = idx1+1; i<MAX_USER_INPUT; i++){ // search from character next to the first comma 
+           if(userInput[i]=='\0' || userInput[i]==','){ // skip if end of string or second comma
                break;
            }
            if(!(isEmpty(userInput[i]))){
-              if(isHexadecimal(userInput[i])){      
+              if(isHexadecimal(userInput[i])){     // store the hexadecimal value into input
                 input[last++] += userInput[i]; 
-                if(last>9){
+                if(last>9){ // if parameter is too long, print out error message
                     printErrorMessage(ERROR_PARAMETER_LENGTH);
                     return ERROR; 
                 }
-              }else{
+              }else{ // print error for non-hexadecimal value 
                 printErrorMessage(ERROR_INPUT_FORMAT);
                 return ERROR;
               }
            }
        }
        numOfParams = 2; 
-       strcpy(params[1],input);
+       strcpy(params[1],input); // store second parameter into params 
    }
-   if(n_comma==2){
-       memset(input,0,sizeof(input)); 
+   if(comma==2){ // if there are two commas
+       memset(input,0,sizeof(input)); // initialize input and last
        last = 0;  
-        for(i = idx2+1; i<MAX_USER_INPUT; i++){
-           if(userInput[i]=='\0'){
+        for(i = idx2+1; i<MAX_USER_INPUT; i++){ // search from character next to second comma 
+           if(userInput[i]=='\0'){ // break if end of string
                break;
            }
-           if(userInput[i]!='\t' && userInput[i]!=' '  && userInput[i]!='\n'){
-               if(!('0' <= userInput[i] && userInput[i] <= '9' ) || ('A' <= userInput[i] &&userInput[i] <= 'F') || ('a' <= userInput[i] && userInput[i] <= 'f')){
-                  printErrorMessage(ERROR_PARAMETER_NOT_HEX );
-                  return ERROR;
-               }
+            if(!(isEmpty(userInput[i]))){
+              if(isHexadecimal(userInput[i])){     // store the hexadecimal value into input
                 input[last++] += userInput[i]; 
-                if(last>9){
+                if(last>9){ // if parameter is too long, print out error message
                     printErrorMessage(ERROR_PARAMETER_LENGTH);
                     return ERROR; 
                 }
-           }
+              }else{ // print error for non-hexadecimal value 
+                printErrorMessage(ERROR_INPUT_FORMAT);
+                return ERROR;
+        }
        }
+        }
        numOfParams = 3; 
-       strcpy(params[2],input);
+       strcpy(params[2],input); // store third parameter into params
    }
    return 1; 
 }
@@ -346,7 +346,7 @@ void showOpcode(){
     for(int i = 0; i < MAX_HASH_SIZE ; i++) {
         Table_Element *elem = HashTable[i];
         printf("%d :",i);
-        if(HashTable[i] == NULL) {
+        if(elem == NULL) {
             printf("\n");
             continue;
         }
@@ -362,9 +362,8 @@ void showOpcode(){
 }
 
 int getHashKey(char * mnemonic) {
-    long len = strlen(mnemonic);
-    int key = mnemonic[0] + mnemonic[len-1];
-    return key%20;
+    int key = mnemonic[0] + mnemonic[strlen(mnemonic)];
+    return key%MAX_HASH_SIZE;
 }
 
 int getOpcode(){
