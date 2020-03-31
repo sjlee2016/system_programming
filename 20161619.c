@@ -85,14 +85,19 @@ int isHexadecimal(char c){
  return ('0' <= c && c <= '9' ) || ('A' <= c && c  <= 'F') || ('a' <= c && c <= 'f'); // returns 1 if the character is in hexadecimal
 }
 void printErrorMessage(int type){ // print out error message for specific type 
-    switch(type){
-        case ERROR_PARAMETER : printf("Wrong parameter given..\n"); break;
-        case ERROR_ADDRESS_OUT_OF_BOUND : printf("Address out of bound..\n"); break; 
-        case ERROR_INPUT_FORMAT : printf("Wrong parameter given..\n"); break;
-        case ERROR_PARAMETER_LENGTH :  printf("Parameter length cannot be bigger than 9..\n"); break;
-        case ERROR_PARAMETER_OUT_OF_BOUND : printf("All parameter should be in between 0~0XFF..\n");break;
-        default : printf("Wrong command.\n"); 
-    }
+        if(type==ERROR_PARAMETER) 
+		printf("Wrong parameter given..\n");
+        else if(type== ERROR_ADDRESS_OUT_OF_BOUND)
+		 printf("Address out of bound..\n");  
+        else if(type==ERROR_INPUT_FORMAT)
+		 printf("Wrong parameter given..\n"); 
+        else if(type== ERROR_PARAMETER_LENGTH)
+		  printf("Parameter length cannot be bigger than 9..\n"); 
+        else if(type== ERROR_PARAMETER_OUT_OF_BOUND)
+		 printf("All parameter should be in between 0~0XFF..\n");
+        else
+		printf("Wrong command.\n"); 
+    
 }
 
 int isComplexInst(){
