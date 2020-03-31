@@ -104,6 +104,12 @@ int isEmpty(char c);
  * ****************************************************/
 int isHexadecimal(char c);
 /******************************************************
+ * cleanEmptyStr
+ * removes any empty string in front of the first non-empty letter
+ * in the command. 
+ * *****************************************************/
+void cleanEmptyStr();
+/******************************************************
  * checkParams
  * checks the number of parameters in the user input
  * and stores them into params array. the number of parameter is stored in the global variable, numOfParams

@@ -269,7 +269,7 @@ int dumpMemory(){
             defaultStartAddr = -1;
         start = defaultStartAddr + 1;  // increment start value 
         end = start + (16 * 10 - 1); // set the end address to be 159 bigger than start addresss
-        defaultStartAddr = end; // update global variable
+        
     }
     else if (numOfParams == 1){ // if one parameter is given
         start = strtol(params[0], &err, 16); // set start address to the given parameter
@@ -294,6 +294,7 @@ int dumpMemory(){
        printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
        return ERROR;
     }
+    defaultStartAddr = end; // update global variable
     printMem(start, end); // print out memory 
     return SUCCESS; 
 }
