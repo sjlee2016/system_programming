@@ -284,8 +284,7 @@ int dumpMemory(){
         end = start + (16 * 10 - 1); 
         if(end > MAX_MEMORY_SIZE-1 )// if end address is bigger than MAX memory size
         end = MAX_MEMORY_SIZE-1;  // set end address to the end memory address
-    }
-    else if (numOfParams == 2) { // if two parameters are given
+    }else if (numOfParams == 2) { // if two parameters are given
         start = strtol(params[0], &err, 16); // set start
         end = strtol(params[1], &err, 16); // set end address 
     }
@@ -294,8 +293,8 @@ int dumpMemory(){
          return ERROR;
     }
 
-    if(start > MAX_MEMORY_SIZE || end > MAX_MEMORY_SIZE || start < 0 || end < 0){ // print error message if start is bigger than max memory or less than zero
-       printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
+    if(start > MAX_MEMORY_SIZE || end > MAX_MEMORY_SIZE || start < 0 || end < 0){ // print error message if start is bigger than max memory or less than zero    printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
+      printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
        return ERROR;
     }
 
@@ -304,6 +303,10 @@ int dumpMemory(){
        return ERROR;
     }
     
+    if(end > MAX_MEMORY_SIZE-1 ){ // if end address is bigger than MAX memory size
+        end = MAX_MEMORY_SIZE-1;  // set end address to the end memory address
+    }
+  
     defaultStartAddr = end; // update global variable
     printMem(start, end); // print out memory 
     return SUCCESS; 
