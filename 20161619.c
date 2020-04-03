@@ -1,17 +1,18 @@
 #include <stdio.h>
 #include "20161619.h"
+
 void updateHistory(char *command){
     h_node temp = (History_Node *)malloc(sizeof(History_Node) * 1); // allocate history node
     temp->n = historyCount; // store current number of history stored into n 
     temp->next = NULL;
     temp->s = (char *)malloc(sizeof(char) * strlen(command)); // dynamically allocate char array 
-    command[strlen(command)-1]='\0'; // store null value at the end of the array
+    if(strlen(command)>0)
+        command[strlen(command)-1]='\0'; // delete enter
     strcpy(temp->s, command); // copy command to s 
     if (head == NULL){ // if there is no previous history node stored
         head = temp; // update head and current
         current = head;
-    }
-    else{
+    } else{
         current->next = temp; // otherwise add the new node to the linked list
         current = temp;
     }
@@ -46,11 +47,11 @@ int listdir(const char *path){
     }
     printf("\n"); 
     closedir(dp); // close the directory
-    return 0;
+    return SUCCESS;
 }
 
 void printAllCommands(){ // print out all the commands
-    printf("h[elp]\nd[ir]\nq[uit]\ndu[mp]\ne[dit] address, value\nf[ill] start, end, value\nreset\nopcode mnemonic\nopcodelist\n");
+    printf("h[elp]\nd[ir]\nq[uit]\ndu[mp] [start, end] \ne[dit] address, value\nf[ill] start, end, value\nreset\nopcode mnemonic\nopcodelist\n");
 }
 
 int isSimpleInst(){
@@ -86,7 +87,7 @@ int isHexadecimal(char c){
 }
 void printErrorMessage(int type){ // print out error message for specific type 
         if(type==ERROR_PARAMETER) 
-		printf("Wrong parameter given..\n");
+		printf("Wrong command format given..\n");
         else if(type== ERROR_ADDRESS_OUT_OF_BOUND)
 		 printf("Address out of bound..\n");  
         else if(type==ERROR_INPUT_FORMAT)
@@ -128,6 +129,7 @@ int checkParams(){
              } else if(comma==2){ // if there is 2 commas 
                 idx2=i;  // store the location of second comma in idx2 eg) 1,2,3
              }else {  // returns 0 because there should not be more than 3 commas 
+                printf("there should not be more than 3 parameters..\n"); 
                 return ERROR;  // eg) 1,2,3,4
              }
        }
@@ -220,7 +222,7 @@ void printMem(long start, long end){
     int value; 
     long i,j;
     for (i = rowStart; i <= rowEnd; i += 16) { // loop through rowStart until rowEnd, each incrementing by 16 
-        printf("%05lX ", i); 
+        printf("%05lX ", i);
         for (j = i; j < i + 16; j++){
             if (j >= start && j <= end) { // if the address is within the start and end address
                 value = VMemory[j];  // print out the memory 
@@ -291,7 +293,7 @@ int dumpMemory(){
     if(end >= MAX_MEMORY_SIZE){ // if end address is bigger than MAX memory size
         end = MAX_MEMORY_SIZE-1;  // set end address to the end memory address
     }
-    if(start > MAX_MEMORY_SIZE || start < 0 ){ // print error message if start is bigger than max memory or less than zero
+    if(start > MAX_MEMORY_SIZE || start < 0 || end < 0){ // print error message if start is bigger than max memory or less than zero
        printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
        return ERROR;
     }
@@ -312,7 +314,7 @@ int editMemory(){
         if (address < 0 || address > MAX_MEMORY_SIZE-1){ // print error message if address is out of bound 
             printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
             return ERROR;
-        }else if(value > 0xFF){ // print out error message if value is out of bound 
+        }else if(value > 0xFF || value < 0){ // print out error message if value is out of bound 
               printErrorMessage(ERROR_PARAMETER_OUT_OF_BOUND);
               return ERROR;
         }
@@ -339,11 +341,11 @@ int fillMemory(){
         }
         else if (start > end){
             printf("start address should be bigger than end address\n");
-            return 0;
+            return ERROR;
         }
-        if (value > 0xFF){
+        if (value > 0xFF || value < 0){
             printErrorMessage(ERROR_PARAMETER_OUT_OF_BOUND);
-            return 0;
+            return ERROR;
         }
         for (long i = start; i <= end; i++){ // update the memory value from start to end address 
             VMemory[i] = value;
@@ -357,13 +359,16 @@ int fillMemory(){
     
 }
 void showOpcode(){ // print out all opcodes from hash table
-    for(int i = 0; i < MAX_HASH_SIZE ; i++) { // loop through hash table
-        Table_Element *elem = HashTable[i]; // get table element from hash table[i] 
+     Table_Element *elem;
+     int i = 0; 
+     while(i<MAX_HASH_SIZE){
+        elem = HashTable[i]; // get table element from hash table[i] 
         printf("%d :",i);
         if(elem == NULL) { // if the following table is empty, skip
             printf("\n");
             continue;
         }
+        
         while(elem != NULL) { // loop through the element until it points to null 
             printf(" [%s,%02X]",elem->mnemonic,elem->opcode); // print out the mnemonic and opcode of the table element
             if(elem->next != NULL) { // print arrow if next element exists
@@ -372,11 +377,14 @@ void showOpcode(){ // print out all opcodes from hash table
             elem = elem->next; // continue to next pointer
         }
         printf("\n");
+        i++;
     }
+    
 }
 
 int getHashKey(char * mnemonic) { // returns the hash key for the following mnemonic
-    int key = mnemonic[0] + mnemonic[strlen(mnemonic)-1];
+    int key = 0;
+    key = mnemonic[0] + mnemonic[strlen(mnemonic)-1];
     return key%MAX_HASH_SIZE;
 }
 
@@ -429,14 +437,15 @@ void insertTableElement(int opcode, char * mnemonic, char * format ){
     strcpy(newElem->mnemonic,mnemonic); // copy mnemonic and format string
     strcpy(newElem->format,format);
     newElem->opcode = opcode;
+    newElem->next = NULL; 
     int key = getHashKey(mnemonic); // get hash key for the following mnemonic
     if(HashTable[key]!=NULL){ //  if the element is not the first element to be inserted into the table with the specific hash key 
         newElem->next = HashTable[key]; // point to the current head 
         HashTable[key] = newElem; // update the head to new node
     }else { // if it is the first element
         HashTable[key] = newElem;  // update head node 
-        newElem->next = NULL;  // point to null 
     }
+
 }
 int getCommand()
 {
@@ -446,40 +455,40 @@ int getCommand()
         userInput[i] = '\0';
     printf("sicsim> ");
     fgets(userInput, MAX_USER_INPUT, stdin);
-    cleanEmptyStr();
-    if (isSimpleInst()) {
+    cleanEmptyStr();  // remove unnessary empty string 
+    if (isSimpleInst()) { // user command is one of the simple insturctions 
         historyCount++;
         updateHistory(userInput);
-        if (strcmp(command, "quit") == 0 || strcmp(command, "q") == 0){
+        if (strcmp(command, "quit") == 0 || strcmp(command, "q") == 0){   // quit OR q 
             return QUIT;
         }
-        else if (strcmp(command, "help") == 0 || strcmp(command, "h") == 0){
+        else if (strcmp(command, "help") == 0 || strcmp(command, "h") == 0){ // help OR h 
             printAllCommands();
         }
-        else if (strcmp(command, "dir") == 0 || strcmp(command, "d") == 0){
+        else if (strcmp(command, "dir") == 0 || strcmp(command, "d") == 0){ // dir OR d  
             listdir(".");
         }
-        else if (strcmp(command, "history") == 0 || strcmp(command, "hi") == 0){
+        else if (strcmp(command, "history") == 0 || strcmp(command, "hi") == 0){ // history OR hi 
             showHistory();
-        }else if(strcmp(command,"reset")==0){
+        }else if(strcmp(command,"reset")==0){ // reset memory
             resetMemory(); 
-        }else if(strcmp(command,"opcodelist")==0){
+        }else if(strcmp(command,"opcodelist")==0){ // print opcode list 
             showOpcode(); 
         }
     }
-    else if (isComplexInst()){
+    else if (isComplexInst()){   // user command is one of the complex instructions 
         instLength = strlen(command); 
-        if ((strcmp(command, "dump") == 0 || strcmp(command, "du") == 0) && checkParams()){
+        if ((strcmp(command, "dump") == 0 || strcmp(command, "du") == 0) && checkParams()){ // dump OR du
             successful = dumpMemory();
-        }else if((strcmp(command, "edit") == 0 || strcmp(command, "e") == 0) && checkParams()){
+        }else if((strcmp(command, "edit") == 0 || strcmp(command, "e") == 0) && checkParams()){ // edit OR e 
             successful = editMemory();
-        }else if((strcmp(command, "fill") == 0 || strcmp(command, "f") == 0)  && checkParams()){
+        }else if((strcmp(command, "fill") == 0 || strcmp(command, "f") == 0)  && checkParams()){  // fill OR f
             successful = fillMemory();
-        }else if(strcmp(command, "opcode") == 0 && checkParamsMnemonic()){
+        }else if(strcmp(command, "opcode") == 0 && checkParamsMnemonic()){ // opcode 
             successful = getOpcode();
         }
     }
-    if(successful){
+    if(successful){ // insert to history list only if command was successful 
          historyCount++;
          updateHistory(userInput);
     }
