@@ -612,10 +612,11 @@ void freeSymbolTable(){
 
 }
 
-void parseSymbol( char * line ){
+void parseLine( char * line ){
     int numWord = 0; 
     int numChar = 0;
     int needToIncrement = 0; 
+    char * err;
     for(int i = 0; i < 5; i++){
         for(int j = 0 ; j < 20; j++)
           tempStorage[i][j] = '\0'; 
@@ -623,24 +624,23 @@ void parseSymbol( char * line ){
     if(line[0]=='\''){
         return;
     }
-    for(int i = 0 ; i < line_size; i++){
-        if(line[i]=='\n'){
+    for(int i = 0; i < line_size-1; i++){
+        if(line[i]=='\0' || line[i]=='\n'){
             break;
         }
         if(!isEmpty(line[i])){
             tempStorage[numWord][numChar++] = line[i]; 
             needToIncrement = 1; 
-        }else if(needToIncrement){
-            needToIncrement = 0;
-            numChar = 0;
-            numWord++; 
+            if(isEmpty(line[i+1])){
+                numWord++;
+                numChar = 0;
+            }
         }
-
     }
-    
     if(numWord==3&& getOpcode(tempStorage[0],1)==-1){
         if(strcmp(tempStorage[1],"START")==0){
             strcpy(title,tempStorage[1]);
+            location = strtol(tempStorage[2], &err, 16);
         } else if(strcmp(tempStorage[1],"RESB")==0 || strcmp(tempStorage[1],"RESW")==0 || strcmp(tempStorage[1],"WORD")==0 || strcmp(tempStorage[1],"RESB")==0 ){
             insertSymbolElement(tempStorage[0],"TEMP ADDRESS", tempStorage[1], tempStorage[2]); 
         }else {
@@ -649,8 +649,17 @@ void parseSymbol( char * line ){
     }
 }   
 int passOne(char * fileName){
+    char lstName [20];
+    for(int i = 0; i < strlen(fileName); i++){
+        if(fileName[i]=='.'){
+            break;
+        }
+        lstName[i] = fileName[i]; 
+    }
     FILE *in = fopen(fileName,"r");
-    int LOC = 0;
+    FILE *out = fopen(strcat(filename,".lst"),"w");
+    location = 0; 
+    int numOfLines = 0;
     char line[line_size];
     char c; 
     int i = 0; 
@@ -664,15 +673,19 @@ int passOne(char * fileName){
          break ;
       }
       if(c=='\n'){
-          printf("%s\n",line);
-          parseSymbol(line);
+          numOfLines+=5; 
+          parseLine(line);
+          printf("%d\t%lX\t%s\n", numOfLines,location,line);
+          fprintf(out, "%d\t%4lX\t%s\n", numOfLines,location,line);
           memset(line,0,sizeof(line)); // initialize input and last
           i = 0;
       }else {
           line[i++] = c; 
       }
+     
     }
-
+    fclose(out);
+    fclose(in); 
     return SUCCESS;
 }
 int assemble(char * fileName){

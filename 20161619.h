@@ -207,10 +207,8 @@ int getHashKey(char * mnemonic);
  * returns 1 otherwise
  * ****************************************************/
 int getCommand();
-
 int checkFilename();
 void showSymbol(); 
 int readFile(char * fileName);
-
 int assemble(char * fileName);
 int passOne();

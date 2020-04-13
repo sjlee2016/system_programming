@@ -1,0 +1,53 @@
+5	   0	COPY   START  0
+10	   0	FIRST  STL    RETADR
+15	   0	       LDB    #LENGTH
+20	   0	       BASE   LENGTH
+25	   0	CLOOP  +JSUB  RDREC
+30	   0	       LDA    LENGTH
+35	   0	       COMP   #0
+40	   0	       JEQ    ENDFIL
+45	   0	       +JSUB  WRREC
+50	   0	       J      CLOOP
+55	   0	ENDFIL LDA    EOF
+60	   0	       STA    BUFFER
+65	   0	       LDA    #3
+70	   0	       STA    LENGTH
+75	   0	       +JSUB  WRREC
+80	   0	       J      @RETADR
+85	   0	EOF    BYTE   C'EOF'
+90	   0	RETADR RESW   1
+95	   0	LENGTH RESW   1
+100	   0	BUFFER RESB   4096
+105	   0	.
+110	   0	.      SUBROUTINE TO READ RECORD INTO BUFFER
+115	   0	.
+120	   0	RDREC  CLEAR  X
+125	   0	       CLEAR  A
+130	   0	       CLEAR  S
+135	   0	       +LDT   #4096
+140	   0	RLOOP  TD     INPUT
+145	   0	       JEQ    RLOOP
+150	   0	       RD     INPUT
+155	   0	       COMPR  A, S
+160	   0	       JEQ    EXIT
+165	   0	       STCH   BUFFER, X
+170	   0	       TIXR   T
+175	   0	       JLT    RLOOP
+180	   0	EXIT   STX    LENGTH
+185	   0	       RSUB
+190	   0	INPUT  BYTE   X'F1'
+195	   0	.
+200	   0	.      SUBROUTINE TO WRITE RECORD FROM BUFFER
+205	   0	.
+210	   0	WRREC  CLEAR  X
+215	   0	       LDT    LENGTH
+220	   0	WLOOP  TD     OUTPUT
+225	   0	       JEQ    WLOOP
+230	   0	       LDCH   BUFFER, X
+235	   0	       WD     OUTPUT
+240	   0	       TIXR   T
+245	   0	       JLT    WLOOP
+250	   0	       RSUB
+255	   0	OUTPUT BYTE   X'05'
+260	   0	       END    FIRST
+265	   0	
