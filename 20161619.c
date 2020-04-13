@@ -443,7 +443,6 @@ void showOpcode(){ // print out all opcodes from hash table
     }
     
 }
-
 void showSymbol(){ // print out all opcodes from hash table
      Symbol_Element *elem;
      int i = 0; 
@@ -456,7 +455,7 @@ void showSymbol(){ // print out all opcodes from hash table
         }
         while(elem != NULL) { // loop through the element until it points to null 
             found = 1;
-            printf("\t%s     %s\n",elem->identifier,elem->address); // print out the mnemonic and opcode of the table element
+            printf("\t%s     %04lX\n",elem->identifier,elem->address); // print out the mnemonic and opcode of the table element
             elem = elem->next; // continue to next pointer
         }
         i++;
@@ -477,27 +476,35 @@ int getHashKeySymbol(char * symbol) {
     return key%SYMBOL_HASH_SIZE;
 }
 
-char * getAddress(char * symbol){
+long getAddress(char * symbol){
     int key = getHashKeySymbol(symbol); 
     for(Symbol_Element * temp = SymbolTable[key]; temp != NULL; temp= temp -> next){
         if(strcmp(temp->identifier,symbol)==0){
             return temp->address;
         }
     }
-    return NULL; 
+    return -1;
 }
-int getOpcode(char * mnemonic, int option){  // prints out opcode for the target mnemonic
+Table_Element * findElement(char * mnemonic){
     int key = getHashKey(mnemonic);  // finds hashkey 
     for(Table_Element *temp = HashTable[key]; temp != NULL; temp = temp -> next) { // loop through the following hash table
         if(strcmp(temp->mnemonic,mnemonic) == 0){ // if target mnemonic is found 
-            if(option==0) // default 
-                printf("opcode is %X\n", temp->opcode); // print out the opcode
-            return temp->opcode;
+             return temp;
         }
     }
-    if(option==0)
-     printf("opcode is not found for %s\n", mnemonic); // if not found
-    return -1;
+    return NULL;
+}
+int getOpcode(char * mnemonic, int option){  // prints out opcode for the target mnemonic
+    Table_Element * elem = findElement(mnemonic); 
+    if(elem==NULL){
+        if(option==0)
+         printf("opcode is not found for %s\n", mnemonic); // if not found
+     return -1;
+    }else{
+        if(option==0)
+          printf("opcode for %s is %d\n", mnemonic, elem->opcode); 
+     return elem->opcode;
+    }
 }
 int checkParamsMnemonic(){
     char tempM[10]; 
@@ -557,11 +564,11 @@ Symbol_Element * getSymbol(char * identifier){
     }
     return NULL; 
 }
-int insertSymbolElement(char * identifier, char * address, char * type, char * value){
+int insertSymbolElement(char * identifier, long address, char * type, char * value){
     Symbol_Element *newElem = (Symbol_Element*) malloc(sizeof(Symbol_Element)); // allocate new table element
     Symbol_Element *temp, *previous = NULL; 
     strcpy(newElem->identifier,identifier); // copy mnemonic and format string
-    strcpy(newElem->address,address);
+    newElem->address= address;
     strcpy(newElem->type,type);
     strcpy(newElem->value,value);
     int key = getHashKeySymbol(identifier); // get hash key for the following mnemonic
@@ -614,7 +621,9 @@ void freeSymbolTable(){
 
 void parseLine( char * line ){
     int numWord = 0; 
+    int variableOrConstant = 0;
     int numChar = 0;
+    int opcode1,opcode2;
     int needToIncrement = 0; 
     char * err;
     for(int i = 0; i < 5; i++){
@@ -640,12 +649,30 @@ void parseLine( char * line ){
     if(numWord==3&& getOpcode(tempStorage[0],1)==-1){
         if(strcmp(tempStorage[1],"START")==0){
             strcpy(title,tempStorage[1]);
-            location = strtol(tempStorage[2], &err, 16);
-        } else if(strcmp(tempStorage[1],"RESB")==0 || strcmp(tempStorage[1],"RESW")==0 || strcmp(tempStorage[1],"WORD")==0 || strcmp(tempStorage[1],"RESB")==0 ){
-            insertSymbolElement(tempStorage[0],"TEMP ADDRESS", tempStorage[1], tempStorage[2]); 
+            LOCCTR = strtol(tempStorage[2], &err, 16);
+        } else if(strcmp(tempStorage[1],"RESB")==0){
+            LOCCTR += strtol(tempStorage[2],&err,16);
+            variableOrConstant = 1;
+        }else if(strcmp(tempStorage[1],"RESW")==0){
+            LOCCTR += 3*strtol(tempStorage[2],&err,16);
+            variableOrConstant = 1;
+        }else if(strcmp(tempStorage[1],"WORD")==0){
+            LOCCTR += 3;
+            variableOrConstant = 1;
+        }else if(strcmp(tempStorage[1],"RESB")==0){
+            LOCCTR += 1;
+            variableOrConstant = 1;
         }else {
-            insertSymbolElement(tempStorage[0],"TEMP ADDRESS","ROUTINE","ROUTINE"); 
+            insertSymbolElement(tempStorage[0],LOCCTR,"ROUTINE","ROUTINE"); 
         }
+        if(variableOrConstant){
+             insertSymbolElement(tempStorage[0],LOCCTR,tempStorage[1],tempStorage[2]); 
+        }
+    }
+    if(getOpcode(tempStorage[0],1)!=-1){
+        
+    }else if(getOpcode(tempStorage[1],1)!=-1){
+
     }
 }   
 int passOne(char * fileName){
@@ -658,7 +685,7 @@ int passOne(char * fileName){
     }
     FILE *in = fopen(fileName,"r");
     FILE *out = fopen(strcat(filename,".lst"),"w");
-    location = 0; 
+    LOCCTR = 0; 
     int numOfLines = 0;
     char line[line_size];
     char c; 
@@ -675,8 +702,8 @@ int passOne(char * fileName){
       if(c=='\n'){
           numOfLines+=5; 
           parseLine(line);
-          printf("%d\t%lX\t%s\n", numOfLines,location,line);
-          fprintf(out, "%d\t%4lX\t%s\n", numOfLines,location,line);
+          printf("%d\t%04lX\t%s\n", numOfLines,LOCCTR,line);
+          fprintf(out, "%d\t%044lX\t%s\n", numOfLines,LOCCTR,line);
           memset(line,0,sizeof(line)); // initialize input and last
           i = 0;
       }else {

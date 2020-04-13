@@ -31,7 +31,7 @@ typedef struct Table_Element{
 typedef struct Symbol_Element{
     char identifier[7];
     char type[20]; 
-    char address[20]; 
+    long address;
     char value[20];
     struct Symbol_Element* next;
 }Symbol_Element;
@@ -65,7 +65,7 @@ char filename[100];
 char fullFileName[100];
 char extension[10];
 char tempStorage[5][20];
-long location = 0;
+long LOCCTR = 0;
 int line_size = 50;
 char title[100];
 //// USER-DEFINED FUNCTIONS 
