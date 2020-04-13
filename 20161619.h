@@ -26,10 +26,18 @@ typedef struct Table_Element{
     struct Table_Element* next;
 }Table_Element;
 
+
+typedef struct Symbol_Element{
+    char identifier[7];
+    char type[7]; 
+    char address[20]; 
+    struct Symbol_Element* next;
+}Symbol_Element;
+
 h_node head;  // points to the head of linked list of history node
 h_node current; // points to the current node of history node 
 Table_Element * HashTable [MAX_HASH_SIZE]; // hash table used to store opcode info 
-
+Symbol_Element * SymbolTable [MAX_HASH_SIZE]; 
 
 /// CONSTANTS used for printing out errors in printErrorMessage function 
 const int ERROR_PARAMETER = -1;
@@ -46,12 +54,14 @@ int numOfParams=0; // global variable to store number of parameters
 long defaultStartAddr = -1;   // default starting address for memory for dump command 
 int instLength = 0; // length of the instruction (excluding unnessary inputs from user like empty space and parameters)
 int historyCount = 0; // total number of history stored 
-char simpleInsts [10][10] = {"help", "h", "dir", "d", "history","hi","quit","q", "reset","opcodelist"}; // list of instructions that does not require any parameter
-char complexInsts[7][10] = {"dump","du","edit","e","fill","f","opcode"}; // list of instructions that require extra parameter input 
+char simpleInsts [11][20] = {"help", "h", "dir", "d", "history","hi","quit","q", "reset","symbol","opcodelist"}; // list of instructions that does not require any parameter
+char complexInsts[9][10] = {"dump","du","edit","e","fill","f","opcode","type","assemble"}; // list of instructions that require extra parameter input 
 char userInput[100]; // stores user input 
 char command[11]; // stores command from user input (excludes empty string)
 char targetMnemonic[7]; // stores mnemonic from user input 
-
+char filename[100]; 
+char fullFileName[100];
+char extension[10];
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************
@@ -191,3 +201,10 @@ int getHashKey(char * mnemonic);
  * returns 1 otherwise
  * ****************************************************/
 int getCommand();
+
+int checkFilename();
+void showSymbol(); 
+int readFile(char * fileName);
+
+int assemble(char * fileName);
+int passOne();

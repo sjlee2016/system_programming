@@ -51,12 +51,12 @@ int listdir(const char *path){
 }
 
 void printAllCommands(){ // print out all the commands
-    printf("h[elp]\nd[ir]\nq[uit]\ndu[mp] [start, end] \ne[dit] address, value\nf[ill] start, end, value\nreset\nopcode mnemonic\nopcodelist\n");
+    printf("h[elp]\nd[ir]\nq[uit]\ndu[mp] [start, end] \ne[dit] address, value\nf[ill] start, end, value\nreset\nopcode mnemonic\nopcodelist\nassemble filename\ntype filename\nsymbol\n");
 }
 
 int isSimpleInst(){
     int i,j,flag,found = 0;
-    for (i = 0; i < 10; i++) { // loop through simple instruction list to find out it matches the user input 
+    for (i = 0; i < 11; i++) { // loop through simple instruction list to find out it matches the user input 
         flag = 0; // initialize flag value
         instLength = strlen(simpleInsts[i]); // get the length of the instruction 
         if (strncmp(userInput, simpleInsts[i], instLength) == 0){ // if user input contains the following instruction
@@ -79,6 +79,20 @@ int isSimpleInst(){
         return ERROR; // return 0 otherwise 
 }
 
+int readFile(char * file){
+    char c; 
+    FILE * in = fopen(file,"r"); ;
+    if(in==NULL){
+        printf("file is not found in the current directory\n");
+        return ERROR; 
+    }
+     while ((c = getc(in)) != EOF)
+        putchar(c);
+    
+    fclose(in);
+
+    return SUCCESS; 
+}
 int isEmpty(char c){
     return (c== ' ' || c == '\t' || c == '\0' || c == '\n'); // if the character is one of the following, it is identified to be empty  
 }
@@ -103,7 +117,7 @@ void printErrorMessage(int type){ // print out error message for specific type
 
 int isComplexInst(){
     instLength = 0;
-    for (int i = 0; i < 7; i++){ // loop through complex instruction list
+    for (int i = 0; i < 9; i++){ // loop through complex instruction list
         instLength = strlen(complexInsts[i]); // get length of the instruction 
         if (strncmp(userInput, complexInsts[i], instLength) == 0) { // if the user input includes following instruction
             if (isEmpty(userInput[instLength])) // check if the next character is empty
@@ -114,6 +128,48 @@ int isComplexInst(){
         }   
     }
     return 0;  
+}
+
+int checkFilename(){
+    int i,j,lenF,lenE, lenT;
+    int numOfPeriod = 0;
+    int filenameLength = 0;
+    lenF = 0; 
+    lenE = 0;
+    lenT = 0;
+    for(int i = 0; i < 100; i++){
+        fullFileName[i] = '\0';
+        filename[i] = '\0'; 
+        extension[i] = '\0';
+    }
+    for(i = instLength; i < MAX_USER_INPUT; i++){
+        if(!isEmpty(userInput[i])){
+            break;
+        }
+    }
+    if(i==MAX_USER_INPUT)
+        return ERROR;
+    
+    for(j = i; j < MAX_USER_INPUT; j++){
+        if(isEmpty(userInput[j])){
+            break; 
+        }
+        if(userInput[j]=='.'){
+            fullFileName[lenT++] = userInput[j];
+            numOfPeriod++;
+        }
+        if(numOfPeriod>1){
+            return ERROR;
+        }
+        if(numOfPeriod==0 && userInput[j]!= '.'){
+            filename[lenF++] = userInput[j]; 
+            fullFileName[lenT++] = userInput[j];
+        }else if(numOfPeriod==1 && userInput[j]!='.'){
+            extension[lenE++] = userInput[j]; 
+            fullFileName[lenT++] = userInput[j];
+        }
+    }
+    return SUCCESS;     
 }
 int checkParams(){ 
    int comma = 0; 
@@ -320,8 +376,8 @@ int editMemory(){
         if (address < 0 || address > MAX_MEMORY_SIZE-1){ // print error message if address is out of bound 
             printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
             return ERROR;
-        }else if(value > 0x7E|| value < 20 ){ // print out error message if value is out of bound 
-              printErrorMessage(ERROR_PARAMETER_OUT_OF_BOUND);
+        }else if(value > 0xFF|| value < 0 ){ // print out error message if value is out of bound 
+               printErrorMessage(ERROR_PARAMETER_OUT_OF_BOUND);
               return ERROR;
         }
         VMemory[address] = value; // change memory to the value 
@@ -388,22 +444,60 @@ void showOpcode(){ // print out all opcodes from hash table
     
 }
 
+void showSymbol(){ // print out all opcodes from hash table
+     Symbol_Element *elem;
+     int i = 0; 
+     int found = 0; 
+     printf("showing symbol...\n");
+     while(i<MAX_HASH_SIZE){
+        elem = SymbolTable[i]; // get table element from hash table[i] 
+        if(elem == NULL) { // if the following table is empty, skip
+            continue;
+        }
+        while(elem != NULL) { // loop through the element until it points to null 
+            found = 1;
+            printf("\t%s     %s\n",elem->identifier,elem->address); // print out the mnemonic and opcode of the table element
+            elem = elem->next; // continue to next pointer
+        }
+        printf("\n");
+        i++;
+    }
+    if(!found){
+        printf("Symbol Table is not found\n"); 
+    }
+}
 int getHashKey(char * mnemonic) { // returns the hash key for the following mnemonic
     int key = 0;
     key = mnemonic[0] + mnemonic[strlen(mnemonic)-1];
     return key%MAX_HASH_SIZE;
 }
 
-int getOpcode(){  // prints out opcode for the target mnemonic
+int getHashKeySymbol(char * symbol) {
+    int key = 0;
+    key = symbol[0]; 
+    return key%MAX_HASH_SIZE; 
+}
+
+char * getAddress(char * symbol){
+    int key = getHashKeySymbol(symbol); 
+    for(Symbol_Element * temp = SymbolTable[key]; temp != NULL; temp= temp -> next){
+        if(strcmp(temp->identifier,symbol)==0){
+            return temp->address;
+        }
+    }
+    return NULL; 
+}
+int getOpcode(int option){  // prints out opcode for the target mnemonic
     int key = getHashKey(targetMnemonic);  // finds hashkey 
     for(Table_Element *temp = HashTable[key]; temp != NULL; temp = temp -> next) { // loop through the following hash table
         if(strcmp(temp->mnemonic,targetMnemonic) == 0){ // if target mnemonic is found 
-            printf("opcode is %X\n", temp->opcode); // print out the opcode
-            return SUCCESS;
+            if(option==0) // default 
+                printf("opcode is %X\n", temp->opcode); // print out the opcode
+            return temp->opcode;
         }
     }
     printf("opcode is not found for %s\n", targetMnemonic); // if not found
-    return ERROR;
+    return -1;
 }
 int checkParamsMnemonic(){
     char tempM[10]; 
@@ -453,6 +547,82 @@ void insertTableElement(int opcode, char * mnemonic, char * format ){
     }
 
 }
+
+Symbol_Element * getSymbol(char * identifier){
+    int key = getHashKey(identifier);
+    for(Symbol_Element *temp = SymbolTable[key]; temp != NULL; temp = temp -> next) { // loop through the following hash table
+        if(strcmp(temp->identifier,identifier) == 0){ // if target mnemonic is found 
+            return temp;
+        }
+    }
+    return NULL; 
+}
+int insertSymbolElement(char * identifier, char * address, char * type ){
+    Symbol_Element *newElem = (Symbol_Element*) malloc(sizeof(Symbol_Element)); // allocate new table element
+    Symbol_Element *temp, *previous = NULL; 
+    strcpy(newElem->identifier,identifier); // copy mnemonic and format string
+    strcpy(newElem->address,address);
+    strcpy(newElem->type,type);
+    int key = getHashKey(identifier); // get hash key for the following mnemonic
+    if(SymbolTable[key]!=NULL){ //  if the element is not the first element to be inserted into the table with the specific hash key 
+    
+        for(temp = SymbolTable[key];  temp->next != NULL; temp=temp->next){
+            if(strcmp(temp->identifier,identifier)==0){
+                printf("Symbol is already defined\n"); 
+                return ERROR; 
+            }
+            else if(strcmp(temp->identifier,identifier)<0){
+                if(previous==NULL){
+                    newElem->next = temp; 
+                    return SUCCESS;
+                }else {
+                    newElem->next = previous->next;
+                    previous->next = newElem; 
+                    return SUCCESS;
+                }
+            }
+            previous = temp; 
+        }
+        
+        temp->next = newElem;
+        return SUCCESS;
+       // update the head to new node
+    }else { // if it is the first element
+        SymbolTable[key] = newElem;  // update head node 
+        return SUCCESS;
+    }
+}
+void freeSymbolTable(){
+    
+    for(int i = 0; i < MAX_HASH_SIZE; i++){
+        Symbol_Element * temp = SymbolTable[i];
+        while (temp!=NULL) {
+            Symbol_Element * erase = temp;
+            temp=temp->next;
+            free(erase);
+        }
+    }
+
+}
+int passOne(char * fileName){
+    char temp1[20];
+    char temp2[20];
+    char temp3[20];
+    FILE * in = fopen(fileName,"r");
+    while(fscanf(in,"%s %s %s", temp1, temp2, temp3)!= EOF){
+        printf("%s %s %s\n", temp1, temp2, temp3);
+    }
+    return SUCCESS;
+}
+int assemble(char * fileName){
+    freeSymbolTable(); 
+    if(!passOne(fileName)){
+        printf("Wrong assembly code..\n");
+        return ERROR; 
+    } 
+    printf("succesffuly assembled %s\n", fileName);
+    return SUCCESS; 
+}
 int getCommand()
 {
     int i; 
@@ -480,6 +650,8 @@ int getCommand()
             resetMemory(); 
         }else if(strcmp(command,"opcodelist")==0){ // print opcode list 
             showOpcode(); 
+        }else if(strcmp(command,"symbol")==0){
+            showSymbol();
         }
     }
     else if (isComplexInst()){   // user command is one of the complex instructions 
@@ -491,14 +663,18 @@ int getCommand()
         }else if((strcmp(command, "fill") == 0 || strcmp(command, "f") == 0)  && checkParams()){  // fill OR f
             successful = fillMemory();
         }else if(strcmp(command, "opcode") == 0 && checkParamsMnemonic()){ // opcode 
-            successful = getOpcode();
+            successful = getOpcode(0);
+        }else if(strcmp(command,"type")==0 && checkFilename()){
+            successful = readFile(fullFileName); 
+        }else if(strcmp(command,"assemble")==0 && checkFilename()){
+            successful = assemble(fullFileName); 
         }
     }
     if(successful){ // insert to history list only if command was successful 
          historyCount++;
          updateHistory(userInput);
     }
-    return 1;
+    return SUCCESS;
 }
 
 
