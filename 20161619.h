@@ -7,6 +7,7 @@
 #define QUIT 0
 #define MAX_MEMORY_SIZE 1048576 // Arraysize to store 1 MB memory 
 #define MAX_HASH_SIZE 20  // max size for hash table 
+#define SYMBOL_HASH_SIZE 27 
 #define MAX_USER_INPUT 100 // max user input
 #define ERROR 0; // used for return value of function
 #define SUCCESS 1; 
@@ -29,15 +30,16 @@ typedef struct Table_Element{
 
 typedef struct Symbol_Element{
     char identifier[7];
-    char type[7]; 
+    char type[20]; 
     char address[20]; 
+    char value[20];
     struct Symbol_Element* next;
 }Symbol_Element;
 
 h_node head;  // points to the head of linked list of history node
 h_node current; // points to the current node of history node 
 Table_Element * HashTable [MAX_HASH_SIZE]; // hash table used to store opcode info 
-Symbol_Element * SymbolTable [MAX_HASH_SIZE]; 
+Symbol_Element * SymbolTable [SYMBOL_HASH_SIZE]; 
 
 /// CONSTANTS used for printing out errors in printErrorMessage function 
 const int ERROR_PARAMETER = -1;
@@ -62,6 +64,10 @@ char targetMnemonic[7]; // stores mnemonic from user input
 char filename[100]; 
 char fullFileName[100];
 char extension[10];
+char tempStorage[5][20];
+long location = 0;
+int line_size = 50;
+char title[100];
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************

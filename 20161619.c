@@ -448,10 +448,10 @@ void showSymbol(){ // print out all opcodes from hash table
      Symbol_Element *elem;
      int i = 0; 
      int found = 0; 
-     printf("showing symbol...\n");
-     while(i<MAX_HASH_SIZE){
+     while(i<SYMBOL_HASH_SIZE){
         elem = SymbolTable[i]; // get table element from hash table[i] 
         if(elem == NULL) { // if the following table is empty, skip
+            i++;
             continue;
         }
         while(elem != NULL) { // loop through the element until it points to null 
@@ -459,7 +459,6 @@ void showSymbol(){ // print out all opcodes from hash table
             printf("\t%s     %s\n",elem->identifier,elem->address); // print out the mnemonic and opcode of the table element
             elem = elem->next; // continue to next pointer
         }
-        printf("\n");
         i++;
     }
     if(!found){
@@ -474,8 +473,8 @@ int getHashKey(char * mnemonic) { // returns the hash key for the following mnem
 
 int getHashKeySymbol(char * symbol) {
     int key = 0;
-    key = symbol[0]; 
-    return key%MAX_HASH_SIZE; 
+    key = symbol[0]-'A'; 
+    return key%SYMBOL_HASH_SIZE;
 }
 
 char * getAddress(char * symbol){
@@ -487,16 +486,17 @@ char * getAddress(char * symbol){
     }
     return NULL; 
 }
-int getOpcode(int option){  // prints out opcode for the target mnemonic
-    int key = getHashKey(targetMnemonic);  // finds hashkey 
+int getOpcode(char * mnemonic, int option){  // prints out opcode for the target mnemonic
+    int key = getHashKey(mnemonic);  // finds hashkey 
     for(Table_Element *temp = HashTable[key]; temp != NULL; temp = temp -> next) { // loop through the following hash table
-        if(strcmp(temp->mnemonic,targetMnemonic) == 0){ // if target mnemonic is found 
+        if(strcmp(temp->mnemonic,mnemonic) == 0){ // if target mnemonic is found 
             if(option==0) // default 
                 printf("opcode is %X\n", temp->opcode); // print out the opcode
             return temp->opcode;
         }
     }
-    printf("opcode is not found for %s\n", targetMnemonic); // if not found
+    if(option==0)
+     printf("opcode is not found for %s\n", mnemonic); // if not found
     return -1;
 }
 int checkParamsMnemonic(){
@@ -549,7 +549,7 @@ void insertTableElement(int opcode, char * mnemonic, char * format ){
 }
 
 Symbol_Element * getSymbol(char * identifier){
-    int key = getHashKey(identifier);
+    int key = getHashKeySymbol(identifier);
     for(Symbol_Element *temp = SymbolTable[key]; temp != NULL; temp = temp -> next) { // loop through the following hash table
         if(strcmp(temp->identifier,identifier) == 0){ // if target mnemonic is found 
             return temp;
@@ -557,23 +557,32 @@ Symbol_Element * getSymbol(char * identifier){
     }
     return NULL; 
 }
-int insertSymbolElement(char * identifier, char * address, char * type ){
+int insertSymbolElement(char * identifier, char * address, char * type, char * value){
     Symbol_Element *newElem = (Symbol_Element*) malloc(sizeof(Symbol_Element)); // allocate new table element
     Symbol_Element *temp, *previous = NULL; 
     strcpy(newElem->identifier,identifier); // copy mnemonic and format string
     strcpy(newElem->address,address);
     strcpy(newElem->type,type);
-    int key = getHashKey(identifier); // get hash key for the following mnemonic
-    if(SymbolTable[key]!=NULL){ //  if the element is not the first element to be inserted into the table with the specific hash key 
-    
+    strcpy(newElem->value,value);
+    int key = getHashKeySymbol(identifier); // get hash key for the following mnemonic
+     if(SymbolTable[key]!=NULL){ //  if the element is not the first element to be inserted into the table with the specific hash key 
+        if(SymbolTable[key]->next==NULL){
+             if(strcmp(SymbolTable[key]->identifier,identifier)>0){
+                  newElem->next = SymbolTable[key];
+                  SymbolTable[key] = newElem;
+             }else{
+                 SymbolTable[key]->next = newElem;
+             }
+             return SUCCESS; 
+        }
         for(temp = SymbolTable[key];  temp->next != NULL; temp=temp->next){
             if(strcmp(temp->identifier,identifier)==0){
                 printf("Symbol is already defined\n"); 
                 return ERROR; 
-            }
-            else if(strcmp(temp->identifier,identifier)<0){
+            }else if(strcmp(temp->identifier,identifier)>0){
                 if(previous==NULL){
                     newElem->next = temp; 
+                    SymbolTable[key] = newElem;
                     return SUCCESS;
                 }else {
                     newElem->next = previous->next;
@@ -583,7 +592,6 @@ int insertSymbolElement(char * identifier, char * address, char * type ){
             }
             previous = temp; 
         }
-        
         temp->next = newElem;
         return SUCCESS;
        // update the head to new node
@@ -593,8 +601,7 @@ int insertSymbolElement(char * identifier, char * address, char * type ){
     }
 }
 void freeSymbolTable(){
-    
-    for(int i = 0; i < MAX_HASH_SIZE; i++){
+    for(int i = 0; i < SYMBOL_HASH_SIZE; i++){
         Symbol_Element * temp = SymbolTable[i];
         while (temp!=NULL) {
             Symbol_Element * erase = temp;
@@ -604,14 +611,68 @@ void freeSymbolTable(){
     }
 
 }
-int passOne(char * fileName){
-    char temp1[20];
-    char temp2[20];
-    char temp3[20];
-    FILE * in = fopen(fileName,"r");
-    while(fscanf(in,"%s %s %s", temp1, temp2, temp3)!= EOF){
-        printf("%s %s %s\n", temp1, temp2, temp3);
+
+void parseSymbol( char * line ){
+    int numWord = 0; 
+    int numChar = 0;
+    int needToIncrement = 0; 
+    for(int i = 0; i < 5; i++){
+        for(int j = 0 ; j < 20; j++)
+          tempStorage[i][j] = '\0'; 
     }
+    if(line[0]=='\''){
+        return;
+    }
+    for(int i = 0 ; i < line_size; i++){
+        if(line[i]=='\n'){
+            break;
+        }
+        if(!isEmpty(line[i])){
+            tempStorage[numWord][numChar++] = line[i]; 
+            needToIncrement = 1; 
+        }else if(needToIncrement){
+            needToIncrement = 0;
+            numChar = 0;
+            numWord++; 
+        }
+
+    }
+    
+    if(numWord==3&& getOpcode(tempStorage[0],1)==-1){
+        if(strcmp(tempStorage[1],"START")==0){
+            strcpy(title,tempStorage[1]);
+        } else if(strcmp(tempStorage[1],"RESB")==0 || strcmp(tempStorage[1],"RESW")==0 || strcmp(tempStorage[1],"WORD")==0 || strcmp(tempStorage[1],"RESB")==0 ){
+            insertSymbolElement(tempStorage[0],"TEMP ADDRESS", tempStorage[1], tempStorage[2]); 
+        }else {
+            insertSymbolElement(tempStorage[0],"TEMP ADDRESS","ROUTINE","ROUTINE"); 
+        }
+    }
+}   
+int passOne(char * fileName){
+    FILE *in = fopen(fileName,"r");
+    int LOC = 0;
+    char line[line_size];
+    char c; 
+    int i = 0; 
+    if(in==NULL){
+        printf("file not found]\n");
+        return ERROR;
+    }
+    while(1){
+       c = fgetc(in);
+      if( feof(in) ) {
+         break ;
+      }
+      if(c=='\n'){
+          printf("%s\n",line);
+          parseSymbol(line);
+          memset(line,0,sizeof(line)); // initialize input and last
+          i = 0;
+      }else {
+          line[i++] = c; 
+      }
+    }
+
     return SUCCESS;
 }
 int assemble(char * fileName){
@@ -663,7 +724,7 @@ int getCommand()
         }else if((strcmp(command, "fill") == 0 || strcmp(command, "f") == 0)  && checkParams()){  // fill OR f
             successful = fillMemory();
         }else if(strcmp(command, "opcode") == 0 && checkParamsMnemonic()){ // opcode 
-            successful = getOpcode(0);
+            successful = getOpcode(targetMnemonic,0);
         }else if(strcmp(command,"type")==0 && checkFilename()){
             successful = readFile(fullFileName); 
         }else if(strcmp(command,"assemble")==0 && checkFilename()){
