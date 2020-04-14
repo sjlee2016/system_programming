@@ -66,8 +66,12 @@ char fullFileName[100];
 char extension[10];
 char tempStorage[5][20];
 long LOCCTR = 0;
+long previousLOCCTR = 0;
 int line_size = 50;
 char title[100];
+char base[100];
+int needToPrint;
+int endFound;
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************

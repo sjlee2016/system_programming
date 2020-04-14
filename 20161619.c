@@ -455,7 +455,7 @@ void showSymbol(){ // print out all opcodes from hash table
         }
         while(elem != NULL) { // loop through the element until it points to null 
             found = 1;
-            printf("\t%s     %04lX\n",elem->identifier,elem->address); // print out the mnemonic and opcode of the table element
+            printf("\t%s\t%04lX\n",elem->identifier,elem->address); // print out the mnemonic and opcode of the table element
             elem = elem->next; // continue to next pointer
         }
         i++;
@@ -485,7 +485,7 @@ long getAddress(char * symbol){
     }
     return -1;
 }
-Table_Element * findElement(char * mnemonic){
+Table_Element * getElement(char * mnemonic){
     int key = getHashKey(mnemonic);  // finds hashkey 
     for(Table_Element *temp = HashTable[key]; temp != NULL; temp = temp -> next) { // loop through the following hash table
         if(strcmp(temp->mnemonic,mnemonic) == 0){ // if target mnemonic is found 
@@ -495,7 +495,7 @@ Table_Element * findElement(char * mnemonic){
     return NULL;
 }
 int getOpcode(char * mnemonic, int option){  // prints out opcode for the target mnemonic
-    Table_Element * elem = findElement(mnemonic); 
+    Table_Element * elem = getElement(mnemonic); 
     if(elem==NULL){
         if(option==0)
          printf("opcode is not found for %s\n", mnemonic); // if not found
@@ -618,21 +618,45 @@ void freeSymbolTable(){
     }
 
 }
+int getAddressingMode(){
+    return 1; 
+}
 
+long getByteSize(char * str){
+    long count = 0;
+    char * err;
+    if(str[0]=='C'){
+        for(int i = 1 ; i < strlen(str); i++){
+            if(str[i]!='\''){
+                count++;
+            }
+        }
+    }else if(str[0]=='X'){
+        count = 1; 
+    }else{
+            return strtol(str,&err,10);
+    }
+    return count; 
+}
 void parseLine( char * line ){
     int numWord = 0; 
     int variableOrConstant = 0;
     int numChar = 0;
-    int opcode1,opcode2;
+    int locationOfOpcode = -1; 
     int needToIncrement = 0; 
+    int isFormatFour = 0; 
+    char trueOpcode[100];
     char * err;
+    memset(trueOpcode,0,sizeof(trueOpcode)); // initialize input and last
     for(int i = 0; i < 5; i++){
         for(int j = 0 ; j < 20; j++)
           tempStorage[i][j] = '\0'; 
     }
-    if(line[0]=='\''){
+    if(line[0]=='.'){
+        needToPrint = 0;
         return;
     }
+
     for(int i = 0; i < line_size-1; i++){
         if(line[i]=='\0' || line[i]=='\n'){
             break;
@@ -646,34 +670,67 @@ void parseLine( char * line ){
             }
         }
     }
-    if(numWord==3&& getOpcode(tempStorage[0],1)==-1){
-        if(strcmp(tempStorage[1],"START")==0){
+    if(getOpcode(tempStorage[0],1)==-1 ){ // Not Opcode 
+        if(strcmp(tempStorage[0],"BASE")==0){
+            strcpy(base,tempStorage[1]);
+            needToPrint = 0;
+        }
+        else if(strcmp(tempStorage[1],"START")==0){
             strcpy(title,tempStorage[1]);
             LOCCTR = strtol(tempStorage[2], &err, 16);
-        } else if(strcmp(tempStorage[1],"RESB")==0){
-            LOCCTR += strtol(tempStorage[2],&err,16);
+        } else if(strcmp(tempStorage[0], "END")==0){
+            LOCCTR += 1;
+            endFound = 1; 
+            needToPrint = 0;
+        }else if(strcmp(tempStorage[1],"RESB")==0){
+            LOCCTR += getByteSize(tempStorage[2]);
             variableOrConstant = 1;
         }else if(strcmp(tempStorage[1],"RESW")==0){
-            LOCCTR += 3*strtol(tempStorage[2],&err,16);
+            LOCCTR += 3*getByteSize(tempStorage[2]);
             variableOrConstant = 1;
         }else if(strcmp(tempStorage[1],"WORD")==0){
-            LOCCTR += 3;
+            LOCCTR += 3*getByteSize(tempStorage[2]);
             variableOrConstant = 1;
-        }else if(strcmp(tempStorage[1],"RESB")==0){
-            LOCCTR += 1;
+        }else if(strcmp(tempStorage[1],"BYTE")==0){
+            LOCCTR += getByteSize(tempStorage[2]);
             variableOrConstant = 1;
         }else {
-            insertSymbolElement(tempStorage[0],LOCCTR,"ROUTINE","ROUTINE"); 
+            if(numWord == 3 ){
+            insertSymbolElement(tempStorage[0],previousLOCCTR,"ROUTINE","ROUTINE"); 
+            locationOfOpcode = 1;
+            }else
+                locationOfOpcode = 0; 
         }
         if(variableOrConstant){
-             insertSymbolElement(tempStorage[0],LOCCTR,tempStorage[1],tempStorage[2]); 
+             insertSymbolElement(tempStorage[0],previousLOCCTR,tempStorage[1],tempStorage[2]);  
+             locationOfOpcode = -1;
+        }
+    }else{
+        locationOfOpcode = 0; 
+    }
+    if(locationOfOpcode>=0){
+    if(tempStorage[locationOfOpcode][0]=='+'){
+        isFormatFour = 1; 
+        for(int i = 1; i < 20;i++)
+            trueOpcode[i-1] = tempStorage[locationOfOpcode][i];
+    }else{
+        strcpy(trueOpcode,tempStorage[locationOfOpcode]);
+    }
+        Table_Element *elem = getElement(trueOpcode);
+        if(elem!=NULL){
+        if(strcmp(elem->format,"1")==0){
+            LOCCTR++;
+        }else if(strcmp(elem->format,"2")==0){
+            LOCCTR+=2;
+        }else if(strcmp(elem->format,"3/4")==0){
+            if(isFormatFour){
+                LOCCTR+=4;
+            }else
+                LOCCTR+=3; 
+        }
         }
     }
-    if(getOpcode(tempStorage[0],1)!=-1){
-        
-    }else if(getOpcode(tempStorage[1],1)!=-1){
-
-    }
+    
 }   
 int passOne(char * fileName){
     char lstName [20];
@@ -686,6 +743,8 @@ int passOne(char * fileName){
     FILE *in = fopen(fileName,"r");
     FILE *out = fopen(strcat(filename,".lst"),"w");
     LOCCTR = 0; 
+    previousLOCCTR = 0;
+    endFound = 0;
     int numOfLines = 0;
     char line[line_size];
     char c; 
@@ -700,12 +759,23 @@ int passOne(char * fileName){
          break ;
       }
       if(c=='\n'){
-          numOfLines+=5; 
+          numOfLines+=5;
+          needToPrint = 1; 
           parseLine(line);
-          printf("%d\t%04lX\t%s\n", numOfLines,LOCCTR,line);
-          fprintf(out, "%d\t%044lX\t%s\n", numOfLines,LOCCTR,line);
+         
+          if(needToPrint){
+          printf("%d\t%04lX\t%s\n", numOfLines,previousLOCCTR,line);
+          fprintf(out, "%d\t%04lX\t%s\n", numOfLines,previousLOCCTR,line);
+          }else{
+          printf("%d\t\t%s\n", numOfLines,line);
+          fprintf(out, "%d\t\t%s\n", numOfLines,line);
+          }
+          previousLOCCTR = LOCCTR; 
           memset(line,0,sizeof(line)); // initialize input and last
           i = 0;
+      if(endFound){
+              break;
+          }
       }else {
           line[i++] = c; 
       }
@@ -721,6 +791,7 @@ int assemble(char * fileName){
         printf("Wrong assembly code..\n");
         return ERROR; 
     } 
+    passTwo(fileName); 
     printf("succesffuly assembled %s\n", fileName);
     return SUCCESS; 
 }
