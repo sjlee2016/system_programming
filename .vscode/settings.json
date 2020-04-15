@@ -2,6 +2,7 @@
     "files.associations": {
         "20161619.h": "c",
         "stdlib.h": "c",
-        "stat.h": "c"
+        "stat.h": "c",
+        "limits.h": "c"
     }
 }

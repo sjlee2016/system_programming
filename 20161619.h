@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include <limits.h>
 #include <string.h>
 #include <dirent.h>
@@ -75,7 +76,7 @@ int endFound;
 int numWord;
 int isFormatFour;
 int locationOfOpcode;
-char trueOpcode[100];
+char * trueMnemonic;
 int format;
 //// USER-DEFINED FUNCTIONS 
 

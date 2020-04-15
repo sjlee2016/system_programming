@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include "20161619.h"
 
 void updateHistory(char *command){
@@ -638,7 +637,6 @@ void parseLine( char * line, int option ){
     locationOfOpcode = -1;
     format = 0;  
     isFormatFour = 0; 
-    memset(trueOpcode,0,sizeof(trueOpcode)); // initialize input and last
     for(int i = 0; i < 5; i++){
         for(int j = 0 ; j < 20; j++)
           operand[i][j] = '\0'; 
@@ -703,14 +701,15 @@ void parseLine( char * line, int option ){
         locationOfOpcode = 0; 
     }
     if(locationOfOpcode>=0){
+        trueMnemonic = (char*)malloc(sizeof(operand[locationOfOpcode]));
+        strcpy(trueMnemonic,operand[locationOfOpcode]);
     if(operand[locationOfOpcode][0]=='+'){
         isFormatFour = 1; 
-        for(int i = 1; i < 20;i++)
-            trueOpcode[i-1] = operand[locationOfOpcode][i];
-    }else{
-        strcpy(trueOpcode,operand[locationOfOpcode]);
+        trueMnemonic = strtok(trueMnemonic ,"+");
+       // for(int i = 1; i < 20;i++)
+         //   trueMnemonic[i-1] = operand[locationOfOpcode][i];
     }
-        Table_Element *elem = getElement(trueOpcode);
+        Table_Element *elem = getElement(trueMnemonic);
         if(elem!=NULL){
         if(strcmp(elem->format,"1")==0){
             LOCCTR++;
@@ -759,11 +758,13 @@ long calculateObjectCode(char * line){
     long objectCode = 0;
     long reg = 0;
     long opcode; 
-    int n,i,x,b,p,e = 0;
+    long disp; 
+    int n=0,i=0,x=0,b=0,p = 0,e = 0;
+    char * trueOperand; 
     if(locationOfOpcode==-1){
         return -1; 
     }
-    opcode = getOpcode(trueOpcode,1); 
+    opcode = getOpcode(trueMnemonic,1); 
     if(format==1)
         return opcode;
     
@@ -789,13 +790,38 @@ long calculateObjectCode(char * line){
                 objectCode += reg; 
 
         }
-    }else if(format==3){
+    }else{
+        opcode = opcode << 4;
+        printf("num word : %d locationOfOpcode %d  --> %s\n", numWord, locationOfOpcode, line);
+        if(numWord - locationOfOpcode == 2){
+            printf("X appeared!! %s\n", line);
+            printf("is %s\n", operand[locationOfOpcode+2]);
+            x = 1; 
+        }
+
         if(numWord - locationOfOpcode == 0){
             printf("should be an operand!\n"); 
             return -1;
         }
-    }else{
-
+        if(operand[locationOfOpcode+1][0]=='#'){ // immediate
+            trueOperand = (char*)malloc(sizeof(operand[locationOfOpcode+1]));
+             strcpy( trueOperand ,operand[locationOfOpcode+1]);
+             trueOperand = strtok( trueOperand ,"#");
+             n = 0;
+             i = 1;
+        }else if(operand[locationOfOpcode+1][0]=='@'){ // indirect
+             trueOperand = (char*)malloc(sizeof(operand[locationOfOpcode+1]));
+             strcpy( trueOperand ,operand[locationOfOpcode+1]);
+             trueOperand = strtok( trueOperand ,"@");
+             n = 1; 
+             i = 0;
+        }else { // simple 
+             trueOperand = (char*)malloc(sizeof(operand[locationOfOpcode+1]));
+             strcpy( trueOperand ,operand[locationOfOpcode+1]);
+             n = 1;
+             i = 1;
+        }
+        
     }
 
    return objectCode;
@@ -826,14 +852,18 @@ int passTwo(char * fileName){
           parseLine(line,1);
           if(needToPrint){
            objectCode = calculateObjectCode(line);
-           if(objectCode >= 0)
+           if(objectCode >= 0){
             fprintf(out, "%d\t%04lX\t%s\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
-           else
+           // printf("%d\t%04lX\t%s\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
+           }else{
            fprintf(out, "%d\t%04lX\t%s\n", numOfLines,previousLOCCTR,line);
-           
+           // printf("%d\t%04lX\t%s\n", numOfLines,previousLOCCTR,line);
+           }
            }
           else{
           fprintf(out, "%d\t\t%s\n", numOfLines,line);
+          //printf("%d\t\t%s\n", numOfLines,line);
+        
           }
           previousLOCCTR = LOCCTR; 
           memset(line,0,sizeof(line)); // initialize input and last
