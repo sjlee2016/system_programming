@@ -23,7 +23,7 @@ typedef struct History_Node{  // node for storing history information
 typedef struct Table_Element{
     char mnemonic[7];
     char format[5];
-    int opcode;
+    long opcode;
     struct Table_Element* next;
 }Table_Element;
 
@@ -64,7 +64,7 @@ char targetMnemonic[7]; // stores mnemonic from user input
 char filename[100]; 
 char fullFileName[100];
 char extension[10];
-char tempStorage[5][20];
+char operand[5][20];
 long LOCCTR = 0;
 long previousLOCCTR = 0;
 int line_size = 50;
@@ -72,6 +72,11 @@ char title[100];
 char base[100];
 int needToPrint;
 int endFound;
+int numWord;
+int isFormatFour;
+int locationOfOpcode;
+char trueOpcode[100];
+int format;
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************
@@ -189,7 +194,7 @@ void showOpcode();
  * returns 1 if successful
  * returns 0 if failed to find the mnemonic
  * ****************************************************/
-int getOpcode();
+long getOpcode();
 
 /******************************************************
  * insertTableElement
