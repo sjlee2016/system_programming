@@ -706,8 +706,6 @@ void parseLine( char * line, int option ){
     if(operand[locationOfOpcode][0]=='+'){
         isFormatFour = 1; 
         trueMnemonic = strtok(trueMnemonic ,"+");
-       // for(int i = 1; i < 20;i++)
-         //   trueMnemonic[i-1] = operand[locationOfOpcode][i];
     }
         Table_Element *elem = getElement(trueMnemonic);
         if(elem!=NULL){
@@ -759,6 +757,8 @@ long calculateObjectCode(char * line){
     long reg = 0;
     long opcode; 
     long disp; 
+    long labelLoc;
+    char * err;
     int n=0,i=0,x=0,b=0,p = 0,e = 0;
     char * trueOperand; 
     if(locationOfOpcode==-1){
@@ -770,7 +770,7 @@ long calculateObjectCode(char * line){
     
     if(format==2){
         objectCode += opcode; 
-        objectCode = objectCode << 8;   
+        objectCode = objectCode << 8;
         if(numWord - locationOfOpcode == 1){
             reg = getRegisterNumber(operand[locationOfOpcode+1]); 
             if(reg < 0){
@@ -791,14 +791,18 @@ long calculateObjectCode(char * line){
 
         }
     }else{
-        opcode = opcode << 4;
-        printf("num word : %d locationOfOpcode %d  --> %s\n", numWord, locationOfOpcode, line);
-        if(numWord - locationOfOpcode == 2){
-            printf("X appeared!! %s\n", line);
-            printf("is %s\n", operand[locationOfOpcode+2]);
-            x = 1; 
+        objectCode = opcode;
+        if(numWord-locationOfOpcode > 2){
+            if(strcmp(operand[locationOfOpcode+2],"X")==0) // X register used
+                x = 1;
+            else if(operand[locationOfOpcode+2][0]!='\0'){
+                printf("3/4 format can only have X as 2nd operand\n");
+                return -1; 
+            }
         }
-
+        if(format==4){
+            e = 1;
+        }
         if(numWord - locationOfOpcode == 0){
             printf("should be an operand!\n"); 
             return -1;
@@ -821,7 +825,48 @@ long calculateObjectCode(char * line){
              n = 1;
              i = 1;
         }
-        
+
+        if(trueOperand[0]>='A' && trueOperand[0]<='Z'){
+            labelLoc = getAddress(trueOperand);
+        }else{
+            if(i==1){
+            labelLoc = strtol(trueOperand, &err, 10);
+            }
+        }
+        disp = labelLoc - LOCCTR;
+        if(format==3){
+        if(-2048 <=  disp && disp <= 2047) {
+            objectCode = objectCode << 12;
+            disp = labelLoc - LOCCTR;
+            if(disp < 0) {
+                 disp = 0x1000 + disp;
+                p = 1;
+                b = 0;
+            }else if (disp <= 4095) {  //BASE relativ로 표현 가능한가?
+             p = 1;
+             b = 0;
+            }else{
+            disp = labelLoc - baseLoc;
+            p = 0;
+            b = 1; 
+            }
+        }
+        }else{ // format 4 
+            disp = labelLoc; 
+            b = 0;
+            p = 1; 
+        }
+        objectCode = opcode; 
+              
+        objectCode = objectCode + n*2 + i;   
+        objectCode = objectCode << 4;
+        objectCode = objectCode + x*8 + b*4 + p*2 + e; 
+
+        if(format==4){
+            objectCode = objectCode << 20;
+        }else
+            objectCode = objectCode << 12; 
+        objectCode += disp; 
     }
 
    return objectCode;
@@ -920,11 +965,16 @@ int passOne(char * fileName){
     return SUCCESS;
 }
 int assemble(char * fileName){
+    char * err; 
+    memset(base,0,sizeof(base));
     freeSymbolTable(); 
     if(!passOne(fileName)){
         printf("Wrong assembly code..\n");
         return ERROR; 
     } 
+    if(base[0]!='\0'){
+        baseLoc = getAddress(base);
+    }
     passTwo(fileName); 
     printf("successfully assembled %s\n", fileName);
     return SUCCESS; 

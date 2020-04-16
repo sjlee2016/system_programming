@@ -78,6 +78,7 @@ int isFormatFour;
 int locationOfOpcode;
 char * trueMnemonic;
 int format;
+long baseLoc;
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************
