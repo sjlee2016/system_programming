@@ -759,12 +759,40 @@ long calculateObjectCode(char * line){
     long disp; 
     long labelLoc;
     char * err;
+    int j=0;
+    int constantValue=0;
     int n=0,i=0,x=0,b=0,p = 0,e = 0;
+    isConstant = 0;
+    memset(v,0,sizeof(v));
     char * trueOperand; 
     if(locationOfOpcode==-1){
-        return -1; 
+        if(strcmp(operand[numWord-2],"BYTE")==0|| strcmp(operand[numWord-2],"WORD")==0){
+        if(operand[numWord-1][0]=='X'){
+            for(int i = 1; i < strlen(operand[numWord-1]);i++){
+                if(operand[numWord-1][i]!='\''){
+                    v[j++]=operand[numWord-1][i];
+                }
+            }
+            objectCode = strtol(v,&err,16);
+        }else if(operand[numWord-1][0]=='C'){
+            for(int i = 1; i < strlen(operand[numWord-1]);i++){
+                if(operand[numWord-1][i]!='\''){
+                  objectCode += operand[numWord-1][i];    
+                  objectCode *= 16;
+                }
+            }
+        }
+        isConstant = 1;
+        return objectCode;  
+        }else
+            return -1;
     }
     opcode = getOpcode(trueMnemonic,1); 
+    if(strcmp(trueMnemonic,"RSUB")==0){
+        objectCode += opcode+3; 
+        objectCode = objectCode << 16;
+        return objectCode;
+    }
     if(format==1)
         return opcode;
     
@@ -830,12 +858,17 @@ long calculateObjectCode(char * line){
             labelLoc = getAddress(trueOperand);
         }else{
             if(i==1){
+            constantValue = 1;
             labelLoc = strtol(trueOperand, &err, 10);
             }
         }
-        disp = labelLoc - LOCCTR;
+        if(constantValue==1)
+            disp = labelLoc;
+        else 
+            disp = labelLoc - LOCCTR;
+        
         if(format==3){
-        if(-2048 <=  disp && disp <= 2047) {
+        if(-2048 <=  disp && disp <= 2047 && constantValue != 1 ) {
             objectCode = objectCode << 12;
             disp = labelLoc - LOCCTR;
             if(disp < 0) {
@@ -854,10 +887,9 @@ long calculateObjectCode(char * line){
         }else{ // format 4 
             disp = labelLoc; 
             b = 0;
-            p = 1; 
+            p = 0; 
         }
-        objectCode = opcode; 
-              
+        objectCode = opcode;      
         objectCode = objectCode + n*2 + i;   
         objectCode = objectCode << 4;
         objectCode = objectCode + x*8 + b*4 + p*2 + e; 
@@ -868,7 +900,8 @@ long calculateObjectCode(char * line){
             objectCode = objectCode << 12; 
         objectCode += disp; 
     }
-
+   // printf("line : %s\n", line);
+   // printf("%d %d %d %d %d %d\n", n,i,x,b,p,e);
    return objectCode;
 }
 int passTwo(char * fileName){
@@ -898,28 +931,28 @@ int passTwo(char * fileName){
           if(needToPrint){
            objectCode = calculateObjectCode(line);
            if(objectCode >= 0){
-               if(format==1|| format==2){
+               if(isConstant){
+                    fprintf(out, "%d\t%04lX\t%s\t%s\n", numOfLines,previousLOCCTR,line,v);
+               }
+               else if(format==1|| format==2 || strcmp(trueMnemonic,"RSUB")==0 ){
                         fprintf(out, "%d\t%04lX\t%s\t",numOfLines,previousLOCCTR,line);
-                   if(numWord==2 || (numWord==3 && strcmp(operand[locationOfOpcode+1],"X")==0))  
+                   if(numWord==2 || (numWord==3 && strcmp(operand[locationOfOpcode+1],"X")==0)||strcmp(trueMnemonic,"RSUB")==0)  
                         fprintf(out,"\t");
                 fprintf(out,"%lX\n", objectCode);
+                }else{
+                    fprintf(out, "%d\t%04lX\t%s\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
+                     }
             }else{
-            fprintf(out, "%d\t%04lX\t%s\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
+                fprintf(out, "%d\t%04lX\t%s\n", numOfLines,previousLOCCTR,line);
             }
-           // printf("%d\t%04lX\t%s\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
-           }else{
-           fprintf(out, "%d\t%04lX\t%s\n", numOfLines,previousLOCCTR,line);
-           // printf("%d\t%04lX\t%s\n", numOfLines,previousLOCCTR,line);
-           }
-           }
-          else{
+        }
+        else{
           fprintf(out, "%d\t\t%s\n", numOfLines,line);
-          //printf("%d\t\t%s\n", numOfLines,line);
-        
-          }
-          previousLOCCTR = LOCCTR; 
-          memset(line,0,sizeof(line)); // initialize input and last
-          i = 0;
+         
+        }
+        previousLOCCTR = LOCCTR; 
+        memset(line,0,sizeof(line)); // initialize input and last
+        i = 0;
       if(endFound){
               break;
           }
