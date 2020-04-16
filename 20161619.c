@@ -12,7 +12,7 @@ void updateHistory(char *command){
         head = temp; // update head and current
         current = head;
     } else{
-        current->next = temp; // otherwise add the new node to the linked list
+        current->next = temp; // otherwise add the new node to  the linked list
         current = temp;
     }
 }
@@ -763,26 +763,30 @@ long calculateObjectCode(char * line){
     int constantValue=0;
     int n=0,i=0,x=0,b=0,p = 0,e = 0;
     isConstant = 0;
-    memset(v,0,sizeof(v));
+    isX = 0; 
+    int ascii;
     char * trueOperand; 
-    if(locationOfOpcode==-1){
+    char v[100];
+    memset(v,0,sizeof(v));
+    if(locationOfOpcode==-1&&numWord>=2){
         if(strcmp(operand[numWord-2],"BYTE")==0|| strcmp(operand[numWord-2],"WORD")==0){
         if(operand[numWord-1][0]=='X'){
             for(int i = 1; i < strlen(operand[numWord-1]);i++){
                 if(operand[numWord-1][i]!='\''){
-                    v[j++]=operand[numWord-1][i];
+                    v[j++] =operand[numWord-1][i];
                 }
             }
+            isX = 1;
             objectCode = strtol(v,&err,16);
         }else if(operand[numWord-1][0]=='C'){
             for(int i = 1; i < strlen(operand[numWord-1]);i++){
                 if(operand[numWord-1][i]!='\''){
-                  objectCode += operand[numWord-1][i];    
-                  objectCode *= 16;
+                    objectCode *= 256;
+                    objectCode += operand[numWord-1][i];
                 }
             }
+            isConstant = 1;
         }
-        isConstant = 1;
         return objectCode;  
         }else
             return -1;
@@ -796,28 +800,24 @@ long calculateObjectCode(char * line){
     if(format==1)
         return opcode;
     
-    if(format==2){
-        objectCode += opcode; 
+    if(format==2 && numWord - locationOfOpcode >= 1 ){
+        objectCode = opcode; 
         objectCode = objectCode << 8;
-        if(numWord - locationOfOpcode == 1){
-            reg = getRegisterNumber(operand[locationOfOpcode+1]); 
-            if(reg < 0){
-                printf("Wrong register input..\n");
-                return -1; 
-            }
-            objectCode += reg;  
-        }else if(numWord - locationOfOpcode == 2){
-            reg = (getRegisterNumber(operand[locationOfOpcode+1]));
-            if(reg < 0){
-                printf("Wrong register input..\n");
-                return -1; 
-            }
-            objectCode += reg; 
-            reg = getRegisterNumber(operand[locationOfOpcode+2]);
-            if(reg > 0) 
-                objectCode += reg; 
-
+        reg = getRegisterNumber(operand[locationOfOpcode+1]); 
+        if(reg < 0){
+            printf("Wrong register input..\n");
+            return -1; 
         }
+        objectCode += reg;  
+        objectCode = objectCode << 4;
+        if(numWord - locationOfOpcode >= 2){
+            reg = getRegisterNumber(operand[locationOfOpcode+2]);
+            if(reg > 0){ 
+                objectCode += reg; 
+            }
+        }
+        objectCode /= 16;
+        return objectCode;
     }else{
         objectCode = opcode;
         if(numWord-locationOfOpcode > 2){
@@ -900,8 +900,8 @@ long calculateObjectCode(char * line){
             objectCode = objectCode << 12; 
         objectCode += disp; 
     }
-   // printf("line : %s\n", line);
-   // printf("%d %d %d %d %d %d\n", n,i,x,b,p,e);
+   printf("line : %s\n", line);
+    printf("%d %d %d %d %d %d\n", n,i,x,b,p,e);
    return objectCode;
 }
 int passTwo(char * fileName){
@@ -931,19 +931,20 @@ int passTwo(char * fileName){
           if(needToPrint){
            objectCode = calculateObjectCode(line);
            if(objectCode >= 0){
-               if(isConstant){
-                    fprintf(out, "%d\t%04lX\t%s\t%s\n", numOfLines,previousLOCCTR,line,v);
-               }
-               else if(format==1|| format==2 || strcmp(trueMnemonic,"RSUB")==0 ){
-                        fprintf(out, "%d\t%04lX\t%s\t",numOfLines,previousLOCCTR,line);
+               if(isX){
+                    fprintf(out, "%d\t%04lX\t%s\t\t%02lX\n", numOfLines,previousLOCCTR,line,objectCode);
+               }else if(isConstant){
+                     fprintf(out, "%d\t%04lX\t%s\t\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
+               }else if(format==1|| format==2 || strcmp(trueMnemonic,"RSUB")==0 ){
+                        fprintf(out, "%d\t%04lX\t%s\t\t",numOfLines,previousLOCCTR,line);
                    if(numWord==2 || (numWord==3 && strcmp(operand[locationOfOpcode+1],"X")==0)||strcmp(trueMnemonic,"RSUB")==0)  
                         fprintf(out,"\t");
                 fprintf(out,"%lX\n", objectCode);
                 }else{
-                    fprintf(out, "%d\t%04lX\t%s\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
+                    fprintf(out, "%d\t%04lX\t%s\t\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
                      }
             }else{
-                fprintf(out, "%d\t%04lX\t%s\n", numOfLines,previousLOCCTR,line);
+                fprintf(out, "%d\t%04lX\t\t%s\n", numOfLines,previousLOCCTR,line);
             }
         }
         else{

@@ -79,8 +79,8 @@ int locationOfOpcode;
 char * trueMnemonic;
 int format;
 long baseLoc;
-char v[100];
 int isConstant;
+int isX;
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************
