@@ -898,7 +898,14 @@ int passTwo(char * fileName){
           if(needToPrint){
            objectCode = calculateObjectCode(line);
            if(objectCode >= 0){
-            fprintf(out, "%d\t%04lX\t%s\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
+               if(format==1|| format==2){
+                        fprintf(out, "%d\t%04lX\t%s\t",numOfLines,previousLOCCTR,line);
+                   if(numWord==2 || (numWord==3 && strcmp(operand[locationOfOpcode+1],"X")==0))  
+                        fprintf(out,"\t");
+                fprintf(out,"%lX\n", objectCode);
+            }else{
+            fprintf(out, "%d\t%04lX\t%s\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
+            }
            // printf("%d\t%04lX\t%s\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
            }else{
            fprintf(out, "%d\t%04lX\t%s\n", numOfLines,previousLOCCTR,line);
