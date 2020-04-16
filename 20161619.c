@@ -868,27 +868,25 @@ long calculateObjectCode(char * line){
             disp = labelLoc - LOCCTR;
         
         if(format==3){
-        if(-2048 <=  disp && disp <= 2047 && constantValue != 1 ) {
-            objectCode = objectCode << 12;
-            disp = labelLoc - LOCCTR;
-            if(disp < 0) {
+        if(-2048 <=  disp && disp <= 2047 && constantValue != 1) {
+            p = 1;
+            b = 0;
+            if(disp < 0) 
                  disp = 0x1000 + disp;
-                p = 1;
-                b = 0;
-            }else if (disp <= 4095) {  //BASE relativ로 표현 가능한가?
-             p = 1;
-             b = 0;
-            }else{
+        }else if (disp <= 4095 && constantValue != 1) {  //BASE relativ로 표현 가능한가?
             disp = labelLoc - baseLoc;
+            b = 1;
             p = 0;
-            b = 1; 
-            }
+        }else{ // direct addressing
+            b = 0;
+            p = 0;
         }
         }else{ // format 4 
             disp = labelLoc; 
             b = 0;
             p = 0; 
         }
+        objectCode = objectCode << 12;   
         objectCode = opcode;      
         objectCode = objectCode + n*2 + i;   
         objectCode = objectCode << 4;
@@ -900,7 +898,7 @@ long calculateObjectCode(char * line){
             objectCode = objectCode << 12; 
         objectCode += disp; 
     }
-   printf("line : %s\n", line);
+     printf("line : %s\n", line);
     printf("%d %d %d %d %d %d\n", n,i,x,b,p,e);
    return objectCode;
 }
