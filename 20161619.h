@@ -81,6 +81,8 @@ int format;
 long baseLoc;
 int isConstant;
 int isX;
+char BUFFER[100] = {0}; 
+char BUFFER_OPERAND[100] = {0};
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************

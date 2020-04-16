@@ -898,13 +898,16 @@ long calculateObjectCode(char * line){
             objectCode = objectCode << 12; 
         objectCode += disp; 
     }
-     printf("line : %s\n", line);
-    printf("%d %d %d %d %d %d\n", n,i,x,b,p,e);
    return objectCode;
 }
 int passTwo(char * fileName){
+    FILE *obj = fopen("test","w");
     FILE *in = fopen(fileName,"r");
     FILE *out = fopen(filename,"w");
+    if(obj==NULL){
+        printf("opps");
+        return 0;
+    }
     LOCCTR = 0;
     previousLOCCTR = 0;
     endFound = 0;
@@ -927,26 +930,39 @@ int passTwo(char * fileName){
           needToPrint = 1; 
           parseLine(line,1);
           if(needToPrint){
-           objectCode = calculateObjectCode(line);
+            objectCode = calculateObjectCode(line);
            if(objectCode >= 0){
                if(isX){
-                    fprintf(out, "%d\t%04lX\t%s\t\t%02lX\n", numOfLines,previousLOCCTR,line,objectCode);
+                    fprintf(out, "%-5d\t%04lX\t%-8s\t\t%02lX\n", numOfLines,previousLOCCTR,line,objectCode);
+                    sprintf(BUFFER_OPERAND,"%02lX",objectCode);
+                    strcat(BUFFER,BUFFER_OPERAND);
+
+                     printf("%02lX%s\n",previousLOCCTR, BUFFER);
+                    // fprintf(obj,"%02lX%s\n",previousLOCCTR, BUFFER);
+                     memset(BUFFER, 0, sizeof(BUFFER));
                }else if(isConstant){
-                     fprintf(out, "%d\t%04lX\t%s\t\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
+                     fprintf(out, "%-5d\t%04lX\t%-8s\t\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
+                     sprintf(BUFFER_OPERAND,"%lX",objectCode);
+                     strcat(BUFFER,BUFFER_OPERAND);
+                     //fprintf(obj,"%02lX%s\n",previousLOCCTR, BUFFER);
+                     printf("%02lX%s\n",previousLOCCTR, BUFFER);
+                     memset(BUFFER, 0, sizeof(BUFFER));
                }else if(format==1|| format==2 || strcmp(trueMnemonic,"RSUB")==0 ){
-                        fprintf(out, "%d\t%04lX\t%s\t\t",numOfLines,previousLOCCTR,line);
+                        fprintf(out, "%-5d\t%04lX\t%-8s\t\t",numOfLines,previousLOCCTR,line);
                    if(numWord==2 || (numWord==3 && strcmp(operand[locationOfOpcode+1],"X")==0)||strcmp(trueMnemonic,"RSUB")==0)  
                         fprintf(out,"\t");
                 fprintf(out,"%lX\n", objectCode);
                 }else{
-                    fprintf(out, "%d\t%04lX\t%s\t\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
-                     }
+                    fprintf(out, "%-5d\t%04lX\t%-8s\t\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
+                }
+                sprintf(BUFFER_OPERAND,"%06lX",objectCode);
+                strcat(BUFFER,BUFFER_OPERAND);
             }else{
-                fprintf(out, "%d\t%04lX\t\t%s\n", numOfLines,previousLOCCTR,line);
+                fprintf(out, "%-5d\t%04lX\t%-12s\n", numOfLines,previousLOCCTR,line);
             }
         }
         else{
-          fprintf(out, "%d\t\t%s\n", numOfLines,line);
+          fprintf(out, "%-5d\t\t%-12s\n", numOfLines,line);
          
         }
         previousLOCCTR = LOCCTR; 
