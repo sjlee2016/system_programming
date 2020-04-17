@@ -930,10 +930,18 @@ long calculateObjectCode(char * line){
     }
    return objectCode;
 }
-int passTwo(char * fileName){
-    FILE *obj = fopen("test","w");
-    FILE *in = fopen(fileName,"r");
-    FILE *out = fopen(filename,"w");
+int passTwo(char * asmFileName){
+    char objName [200];
+    char lstName [200];
+    memset(lstName,0,sizeof(lstName));
+    memset(objName,0,sizeof(objName));
+    strcpy(objName,filename);
+    strcpy(lstName,filename);
+    strcat(objName,".obj");
+    strcat(lstName,".lst");
+    FILE *objFile = fopen(objName,"w");
+    FILE *asmFile = fopen(asmFileName,"r");
+    FILE *lstFile = fopen(lstName,"w");
     Obj_Element * rem;
     LOCCTR = 0;
     previousLOCCTR = 0;
@@ -945,13 +953,13 @@ int passTwo(char * fileName){
     long objectCode;
     int numOfLines = 0;
     char line[line_size];
-    if(in==NULL){
+    if(asmFile==NULL){
         printf("file not found]\n");
         return ERROR;
     }
     while(1){
-       c = fgetc(in);
-      if( feof(in) ) {
+       c = fgetc(asmFile);
+      if( feof(asmFile) ) {
          break ;
       }
       if(c=='\n'){
@@ -960,7 +968,7 @@ int passTwo(char * fileName){
           parseLine(line,1);
           memset(TEMP_BUFFER,0,sizeof(TEMP_BUFFER));
           if(startFound==1){
-              printf("H%s\t%012lX\n",title,endLoc);
+              fprintf(objFile,"H%s\t%012lX\n",title,endLoc);
               startFound = 2; 
           }
           if(needToPrint){
@@ -970,73 +978,73 @@ int passTwo(char * fileName){
             objectCode = calculateObjectCode(line);
            if(objectCode >= 0){
                if(isX){
-                    fprintf(out, "%-5d\t%04lX\t%-8s\t\t%02lX\n", numOfLines,previousLOCCTR,line,objectCode);
+                    fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%02lX\n", numOfLines,previousLOCCTR,line,objectCode);
                     sprintf(TEMP_BUFFER,"%02lX",objectCode);
                     if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) {
-                         printf("T%06lX", T_head->address );
+                         fprintf(objFile,"T%06lX", T_head->address );
                          while(T_head != NULL){
                              rem = T_head;
                              T_head = T_head->next;
-                             printf("%s", rem->objcode);
+                             fprintf(objFile,"%s", rem->objcode);
                              free(rem);
                          }
                      T_head = NULL;
                      T_last = NULL;
-                     printf("\n");
+                     fprintf(objFile,"\n");
                     }
                     insertObjectCode(previousLOCCTR,TEMP_BUFFER);
                 }else if(isConstant){
-                     fprintf(out, "%-5d\t%04lX\t%-8s\t\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
+                     fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
                      sprintf(TEMP_BUFFER,"%lX",objectCode); 
                     if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) {
-                           printf("T%06lX", T_head->address );
+                           fprintf(objFile,"T%06lX", T_head->address );
                          while(T_head != NULL){
                              rem = T_head;
                              T_head = T_head->next;
-                             printf("%s", rem->objcode);
+                             fprintf(objFile,"%s", rem->objcode);
                              free(rem);
                          }
                      T_head = NULL;
                      T_last = NULL;
-                     printf("\n");
+                     fprintf(objFile,"\n");
                     }
                      insertObjectCode(previousLOCCTR,TEMP_BUFFER);
                }else if(format==1|| format==2 || strcmp(trueMnemonic,"RSUB")==0 ){
-                        fprintf(out, "%-5d\t%04lX\t%-8s\t\t",numOfLines,previousLOCCTR,line);
+                        fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t",numOfLines,previousLOCCTR,line);
                    if(numWord==2 || (numWord==3 && strcmp(operand[locationOfOpcode+1],"X")==0)||strcmp(trueMnemonic,"RSUB")==0)  
-                        fprintf(out,"\t");
+                        fprintf(lstFile,"\t");
                 
-                fprintf(out,"%lX\n", objectCode);
+                fprintf(lstFile,"%lX\n", objectCode);
                 sprintf(TEMP_BUFFER,"%lX",objectCode);
                 
                if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) {
-                          printf("T%06lX", T_head->address );
+                          fprintf(objFile,"T%06lX", T_head->address );
                          while(T_head != NULL){
                              rem = T_head;
                              T_head = T_head->next;
-                             printf("%s", rem->objcode);
+                             fprintf(objFile,"%s", rem->objcode);
                              free(rem);
                          }
                      T_head = NULL;
                      T_last = NULL;
-                     printf("\n");
+                     fprintf(objFile,"\n");
                     }
                     insertObjectCode(previousLOCCTR,TEMP_BUFFER);
                 }
                 else{
-                    fprintf(out, "%-5d\t%04lX\t%-8s\t\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
+                    fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
                     sprintf(TEMP_BUFFER,"%06lX",objectCode);
                       if(T_head!=NULL && LOCCTR-T_head->address > 0x1E) {
-                           printf("T%06lX", T_head->address );
+                           fprintf(objFile,"T%06lX", T_head->address );
                           while(T_head != NULL){
                               rem = T_head;
                               T_head = T_head->next;
-                              printf("%s", rem->objcode);
+                             fprintf(objFile,"%s", rem->objcode);
                             free(rem);
                       }
                      T_head = NULL;
                      T_last = NULL;
-                     printf("\n");
+                     fprintf(objFile,"\n");
                   }
                    insertObjectCode(previousLOCCTR,TEMP_BUFFER);
                 }
@@ -1047,23 +1055,23 @@ int passTwo(char * fileName){
                 if(isVariable&&T_head!=NULL&&T_last!=NULL){
                      if(T_head!=NULL ) {
                           
-                        printf("T%06lX", T_head->address );
+                        fprintf(objFile,"T%06lX", T_head->address );
                           while(T_head != NULL){
                               rem = T_head;
                               T_head = T_head->next;
-                              printf("%s", rem->objcode);
+                              fprintf(objFile,"%s", rem->objcode);
                             free(rem);
                       }
                      T_head = NULL;
                      T_last = NULL;
-                     printf("\n");
+                     fprintf(objFile,"\n");
                 }
                 }
-                fprintf(out, "%-5d\t%04lX\t%-12s\n", numOfLines,previousLOCCTR,line);
+                fprintf(lstFile, "%-5d\t%04lX\t%-12s\n", numOfLines,previousLOCCTR,line);
             }
         }
         else{
-          fprintf(out, "%-5d\t\t%-12s\n", numOfLines,line);
+          fprintf(lstFile, "%-5d\t\t%-12s\n", numOfLines,line);
         }
         previousLOCCTR = LOCCTR; 
         memset(line,0,sizeof(line)); // initialize input and last
@@ -1077,30 +1085,31 @@ int passTwo(char * fileName){
      
     }
    if(T_head!=NULL&&T_last!=NULL){
-       printf("T%06lX", T_head->address );
+       fprintf(objFile,"T%06lX", T_head->address );
         while(T_head != NULL){
            rem = T_head;
             T_head = T_head->next;
-             printf("%s", rem->objcode);
+             fprintf(objFile,"%s", rem->objcode);
              free(rem);
         }
         T_head = NULL;
         T_last = NULL;
-        printf("\n");
+        fprintf(objFile,"\n");
     }
     if(R_head!=NULL&&R_last!=NULL){
        while(R_head != NULL){
             Relocation_Element * temp = R_head;
             R_head = R_head->next;
-             printf("M%06lX05\n", temp->address+1);
+             fprintf(objFile,"M%06lX05\n", temp->address+1);
              free(temp);
         }
         R_head = NULL;
         R_last = NULL;
     }
-    printf("E%06lX\n",firstExecLoc);
-    fclose(out);
-    fclose(in); 
+    fprintf(objFile,"E%06lX\n",firstExecLoc);
+    fclose(lstFile);
+    fclose(asmFile); 
+    fclose(objFile);
     return SUCCESS;
 }
 int passOne(char * fileName){
