@@ -1147,7 +1147,7 @@ int passOne(char * fileName){
       }
      
     }
-    if(!StartFound){
+    if(!startFound){
         printf("start is not found!\n");
         return ERROR;
     }
