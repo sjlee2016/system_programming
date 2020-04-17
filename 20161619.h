@@ -40,6 +40,7 @@ typedef struct Symbol_Element{
 typedef struct Obj_Element{
     long address; 
     char * objcode;
+    struct Obj_Element * next;
 }Obj_Element;
 
 typedef struct Relocation_Element{
@@ -96,6 +97,7 @@ char * trueMnemonic;
 int format;
 long baseLoc;
 int isConstant;
+int isVariable;
 int isX;
 char TEMP_BUFFER [100] = {0}; 
 //// USER-DEFINED FUNCTIONS 
