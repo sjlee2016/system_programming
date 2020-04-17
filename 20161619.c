@@ -78,11 +78,11 @@ int isSimpleInst(){
         return ERROR; // return 0 otherwise 
 }
 
-int readFile(char * file){
+int typeFile(char * file){
     char c; 
     FILE * in = fopen(file,"r"); ;
     if(in==NULL){
-        printf("file is not found in the current directory\n");
+        printf("file named %s is not found in the current directory\n",file);
         return ERROR; 
     }
      while ((c = getc(in)) != EOF)
@@ -554,15 +554,6 @@ void insertTableElement(int opcode, char * mnemonic, char * format ){
 
 }
 
-Symbol_Element * getSymbol(char * identifier){
-    int key = getHashKeySymbol(identifier);
-    for(Symbol_Element *temp = SymbolTable[key]; temp != NULL; temp = temp -> next) { // loop through the following hash table
-        if(strcmp(temp->identifier,identifier) == 0){ // if target mnemonic is found 
-            return temp;
-        }
-    }
-    return NULL; 
-}
 int insertSymbolElement(char * identifier, long address, char * type, char * value){
     Symbol_Element *newElem = (Symbol_Element*) malloc(sizeof(Symbol_Element)); // allocate new table element
     Symbol_Element *temp, *previous = NULL; 
@@ -570,6 +561,7 @@ int insertSymbolElement(char * identifier, long address, char * type, char * val
     newElem->address= address;
     strcpy(newElem->type,type);
     strcpy(newElem->value,value);
+    newElem->next = NULL;
     int key = getHashKeySymbol(identifier); // get hash key for the following mnemonic
      if(SymbolTable[key]!=NULL){ //  if the element is not the first element to be inserted into the table with the specific hash key 
         if(SymbolTable[key]->next==NULL){
@@ -637,7 +629,6 @@ void parseLine( char * line, int option ){
     locationOfOpcode = -1;
     format = 0;  
     isVariable = 0;
-    isFormatFour = 0; 
     for(int i = 0; i < 5; i++){
         for(int j = 0 ; j < 20; j++)
           operand[i][j] = '\0'; 
@@ -708,7 +699,7 @@ void parseLine( char * line, int option ){
         trueMnemonic = (char*)malloc(sizeof(operand[locationOfOpcode]));
         strcpy(trueMnemonic,operand[locationOfOpcode]);
     if(operand[locationOfOpcode][0]=='+'){
-        isFormatFour = 1; 
+        format = 4;
         trueMnemonic = strtok(trueMnemonic ,"+");
     }
         Table_Element *elem = getElement(trueMnemonic);
@@ -720,8 +711,7 @@ void parseLine( char * line, int option ){
             LOCCTR+=2;
             format = 2;
         }else if(strcmp(elem->format,"3/4")==0){
-            if(isFormatFour){
-                format = 4;
+            if(format==4){
                 LOCCTR+=4;
             }else{
                 format = 3;
@@ -954,7 +944,7 @@ int passTwo(char * asmFileName){
     int numOfLines = 0;
     char line[line_size];
     if(asmFile==NULL){
-        printf("file not found]\n");
+        printf("file not found\n");
         return ERROR;
     }
     while(1){
@@ -1112,8 +1102,8 @@ int passTwo(char * asmFileName){
     fclose(objFile);
     return SUCCESS;
 }
-int passOne(char * fileName){
-    FILE *in = fopen(fileName,"r");
+int passOne(char * asmFileName){
+    FILE *asmFile = fopen(asmFileName,"r");
     LOCCTR = 0; 
     previousLOCCTR = 0;
     endFound = 0;
@@ -1122,13 +1112,13 @@ int passOne(char * fileName){
     char line[line_size];
     char c; 
     int i = 0; 
-    if(in==NULL){
-        printf("file not found]\n");
+    if(asmFile==NULL){
+        printf("file named %s not found in this directory\n", asmFileName);
         return ERROR;
     }
     while(1){
-       c = fgetc(in);
-      if( feof(in) ) {
+       c = fgetc(asmFile);
+      if( feof(asmFile) ) {
          break ;
       }
       if(c=='\n'){
@@ -1155,15 +1145,18 @@ int passOne(char * fileName){
         printf("end is not found!\n");
         return ERROR;     
     }
-    fclose(in); 
+    fclose(asmFile); 
     return SUCCESS;
 }
 int assemble(char * fileName){
     char * err; 
     memset(base,0,sizeof(base));
+    if(strcmp(extension,"asm")!=0){
+        printf("This machine can only assemble .asm file..\n");
+        return ERROR;
+    }
     freeSymbolTable(); 
     if(!passOne(fileName)){
-        printf("Wrong assembly code..\n");
         return ERROR; 
     } 
     if(base[0]!='\0'){
@@ -1215,7 +1208,7 @@ int getCommand()
         }else if(strcmp(command, "opcode") == 0 && checkParamsMnemonic()){ // opcode 
             successful = getOpcode(targetMnemonic,0);
         }else if(strcmp(command,"type")==0 && checkFilename()){
-            successful = readFile(fullFileName); 
+            successful = typeFile(fullFileName); 
         }else if(strcmp(command,"assemble")==0 && checkFilename()){
             successful = assemble(fullFileName); 
         }
@@ -1226,7 +1219,6 @@ int getCommand()
     }
     return SUCCESS;
 }
-
 
 int main()
 {

@@ -21,7 +21,7 @@ typedef struct History_Node{  // node for storing history information
     struct History_Node *next; 
 }History_Node;
 
-typedef struct Table_Element{
+typedef struct Table_Element{ // node for storing mnemonic information
     char mnemonic[7];
     char format[5];
     long opcode;
@@ -29,7 +29,7 @@ typedef struct Table_Element{
 }Table_Element;
 
 
-typedef struct Symbol_Element{
+typedef struct Symbol_Element{ // node used for symbol table
     char identifier[7];
     char type[20]; 
     long address;
@@ -37,13 +37,13 @@ typedef struct Symbol_Element{
     struct Symbol_Element* next;
 }Symbol_Element;
 
-typedef struct Obj_Element{
+typedef struct Obj_Element{ // node used to store object code 
     long address; 
     char * objcode;
     struct Obj_Element * next;
 }Obj_Element;
 
-typedef struct Relocation_Element{
+typedef struct Relocation_Element{ // node used to store address of relocation
     long address;
     long length;
     struct Relocation_Element* next;
@@ -53,7 +53,7 @@ typedef struct Relocation_Element{
 h_node head;  // points to the head of linked list of history node
 h_node current; // points to the current node of history node 
 Table_Element * HashTable [MAX_HASH_SIZE]; // hash table used to store opcode info 
-Symbol_Element * SymbolTable [SYMBOL_HASH_SIZE]; 
+Symbol_Element * SymbolTable [SYMBOL_HASH_SIZE]; // hash table used for symbol table
 Obj_Element * T_head;
 Obj_Element * T_last;
 Relocation_Element * R_head;
@@ -79,30 +79,30 @@ char complexInsts[9][10] = {"dump","du","edit","e","fill","f","opcode","type","a
 char userInput[100]; // stores user input 
 char command[11]; // stores command from user input (excludes empty string)
 char targetMnemonic[7]; // stores mnemonic from user input 
-char filename[100]; 
-char fullFileName[100];
-char extension[10];
-char operand[5][20];
-long LOCCTR = 0;
-long previousLOCCTR = 0;
-int line_size = 50;
-char title[100];
-char base[100];
-int needToPrint;
-int endFound;
-int numWord;
-int isFormatFour;
-int locationOfOpcode;
-char * trueMnemonic;
-int format;
-long baseLoc;
-int isConstant;
-int isVariable;
-int startFound; 
-long endLoc;
-long firstExecLoc;
-int isX;
-char TEMP_BUFFER [100] = {0}; 
+char filename[100]; // stores the file name without the extension
+char fullFileName[100]; // stores the full filename
+char extension[10]; // stores extension of the filename
+char operand[10][20]; // used to store the operands in asm file 
+long LOCCTR = 0; // stores the current LOCCTR
+long previousLOCCTR = 0; // stores previous LOCCTR
+int line_size = 50; // size of line for reading asm file
+char title[100]; // stores the title of the assembly program
+char base[100]; // stores BASE 
+int needToPrint; // decides whether the object code needs to be printed
+int endFound; // flag to show that file reached END symbol 
+int numWord; // the number of seperate string in current line of assembly code
+int locationOfOpcode; // index of Mnemonic in assembly code 
+char * trueMnemonic; // stores the mnemonic after removing  + 
+int format; // stores the addressing mode of the mnemonic 
+long baseLoc; // address of the BASE register
+int isConstant; // flag to indicate the operand is a constant
+int isVariable; // flag to indicate the operand is a variable
+int startFound;  // flag to indicate that the file reached START symbol
+long endLoc; // location of END in the program 
+long firstExecLoc;  // location of the first executable instruction 
+int isX; // flag to indicate a hexadecimal constant
+char TEMP_BUFFER [100] = {0};  // used to temporary store object code 
+
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************
@@ -220,7 +220,7 @@ void showOpcode();
  * returns 1 if successful
  * returns 0 if failed to find the mnemonic
  * ****************************************************/
-long getOpcode();
+long getOpcode(char * mnemonic, int option);
 
 /******************************************************
  * insertTableElement
@@ -242,8 +242,129 @@ int getHashKey(char * mnemonic);
  * returns 1 otherwise
  * ****************************************************/
 int getCommand();
+
+
+/******************************************************
+ * getHashKeySymbol
+ * returns the hash key for the given symbol
+ * ****************************************************/
+int getHashKeySymbol(char * symbol);
+
+
+/******************************************************
+ * getAddress
+ * returns the address of the given symbol 
+ * ****************************************************/
+long getAddress(char * symbol);
+
+/******************************************************
+ * getElement
+ * returns table element for the given mnemonic.
+ * returns null if the given mnemonic is not found in the hash table. 
+ * ****************************************************/
+Table_Element * getElement(char * mnemonic);
+
+/******************************************************
+ * insertSymbolElement
+ * insert new symbol to the symbol table
+ * returns 1 if successfully inserted
+ * returns 0 if there is already a duplicate in the table 
+ * ****************************************************/
+int insertSymbolElement(char * identifier, long address, char * type, char * value);
+
+/******************************************************
+ * freeSymbolTable
+ * free symbol table. This is called before assemble function is called
+ * in order to erase the previous symbol table
+ * ****************************************************/
+void freeSymbolTable();
+
+/******************************************************
+ * getByteSize
+ * returns the byte size of the given string 
+ * ****************************************************/
+long getByteSize(char * str);
+
+/******************************************************
+ * checkFilename
+ * seperates the file name and extension and store them 
+ * into filename and extension array 
+ * returns 0 if the file is not found in the directory
+ * return 1 otherwise. 
+ * ****************************************************/
 int checkFilename();
+
+/******************************************************
+ * showSymbol
+ * prints out the symbol table
+ * ****************************************************/
 void showSymbol(); 
-int readFile(char * fileName);
+
+/******************************************************
+ * parseLine
+ * parse the given line to calculate the location of the mnemonic,
+ * addressing mode and seperate the operands 
+ * if option is 0 : for the given line of assembly code, inserts symbols
+ * into SYMTAB if it exists
+ * if option is 1 : does not insert symbol into SYMTAB
+ * ****************************************************/
+void parseLine( char * line, int option);
+
+/******************************************************
+ * getRegisterNumber
+ * returns the register number 
+ * ****************************************************/
+long getRegisterNumber(char * r);
+
+/******************************************************
+ * insertObjectCode
+ * insert new object code node into the object code linked list
+ * ****************************************************/
+void insertObjectCode(long address, char * objcode);
+
+/******************************************************
+ * insertRelocationNode
+ * insert new relocation node into the relocation linked list
+ * ****************************************************/
+void insertRelocationNode(long address);
+
+/******************************************************
+ * calculateObjectCode
+ * returns the object code of the given line 
+ * ****************************************************/
+long calculateObjectCode(char * line);
+
+/******************************************************
+ * typeFile
+ * prints out the contents of the file 
+ * returns 0 if the file is not found in the directory
+ * return 1 otherwise. 
+ * ****************************************************/
+int typeFile(char * fileName);
+
+/******************************************************
+ * assemble
+ * create immediate file and object file from the assembly file
+ * returns 0 if there is an error in the assembly code
+ * returns 1 if successful
+ * ****************************************************/
 int assemble(char * fileName);
-int passOne();
+
+/******************************************************
+ * passOne
+ * method used to read the assembly file for the first time
+ * and calculate LOCC for each line and insert symbols into the symbol table
+ * returns 0 if there is an error in the assembly code
+ * returns 1 if successful
+ * ****************************************************/
+int passOne(char * asmFileName);
+
+/******************************************************
+ * passTwo
+ * method called when reading the assembly file for the second time
+ * With the symbol table created by passOne(), it now calculates the object code
+ * for each line and prints out immediate file and object file 
+ * returns 0 if there is an error in the assembly code
+ * returns 1 successful
+ * ****************************************************/
+int passTwo(char * asmFileName);
