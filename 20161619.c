@@ -831,7 +831,8 @@ long calculateObjectCode(char * line){ // returns the object for the given line
         objectCode = objectCode << 8; 
         return objectCode; 
     } 
-    if(format==2 && numWord - locationOfMnemonic >= 1 ){
+
+    if(format==2 && numWord - locationOfMnemonic >= 1 ){ // FORMAT 2 
         objectCode = opcode; 
         objectCode = objectCode << 8;
         reg = getRegisterNumber(operand[locationOfMnemonic+1]); 
@@ -839,72 +840,72 @@ long calculateObjectCode(char * line){ // returns the object for the given line
             printf("[ERROR] in assembly code. Wrong register input..\n");
             return -2; 
         }
-        objectCode += reg;  
-        objectCode = objectCode << 4;
-        if(numWord - locationOfMnemonic >= 2){
-            reg = getRegisterNumber(operand[locationOfMnemonic+2]);
+        objectCode += reg;  // add register code
+        objectCode = objectCode << 4; // shift 4 
+        if(numWord - locationOfMnemonic >= 2){ // if second register is given
+            reg = getRegisterNumber(operand[locationOfMnemonic+2]); 
             if(reg > 0){ 
-                objectCode += reg; 
+                objectCode += reg; // add second register
             }
         }
         objectCode /= 16;
         return objectCode;
-    }else{
+    }else{    // FORMAT 3 OR 4
         objectCode = opcode;
         if(numWord-locationOfMnemonic > 2){
             if(strcmp(operand[locationOfMnemonic+2],"X")==0) // X register used
                 x = 1;
             else if(operand[locationOfMnemonic+2][0]!='\0'){
-                printf("3/4 format can only have X as 2nd operand\n");
-                return -1; 
+                printf("[ERROR] in Assembly code. 3/4 format can only have X as 2nd operand\n");
+                return -2; 
             }
         }
-        if(format==4){
+        if(format==4){ // Extension if format 4
             e = 1;
         }
-        if(numWord - locationOfMnemonic == 0){
-            printf("should be an operand!\n"); 
-            return -1;
+        if(numWord - locationOfMnemonic == 0){ // if there is no operand 
+            printf("[ERROR] in Assembly code. There should be an operand!\n"); 
+            return -2;
         }
-        if(operand[locationOfMnemonic+1][0]=='#'){ // immediate
+        if(operand[locationOfMnemonic+1][0]=='#'){ // immediate addressing
             trueOperand = (char*)malloc(sizeof(operand[locationOfMnemonic+1]));
              strcpy( trueOperand ,operand[locationOfMnemonic+1]);
              trueOperand = strtok( trueOperand ,"#");
              n = 0;
-             i = 1;
-        }else if(operand[locationOfMnemonic+1][0]=='@'){ // indirect
+             i = 1; 
+        }else if(operand[locationOfMnemonic+1][0]=='@'){ // indirect addressing
              trueOperand = (char*)malloc(sizeof(operand[locationOfMnemonic+1]));
              strcpy( trueOperand ,operand[locationOfMnemonic+1]);
              trueOperand = strtok( trueOperand ,"@");
              n = 1; 
              i = 0;
-        }else { // simple 
+        }else { // simple addressing
              trueOperand = (char*)malloc(sizeof(operand[locationOfMnemonic+1]));
              strcpy( trueOperand ,operand[locationOfMnemonic+1]);
              n = 1;
              i = 1;
         }
 
-        if(trueOperand[0]>='A' && trueOperand[0]<='Z'){
-            labelLoc = getAddress(trueOperand);
+        if(trueOperand[0]>='A' && trueOperand[0]<='Z'){ // if operand is string
+            labelLoc = getAddress(trueOperand); // get address
         }else{
             if(i==1){
             constantValue = 1;
-            labelLoc = strtol(trueOperand, &err, 10);
+            labelLoc = strtol(trueOperand, &err, 10); // convert decimal to long
             }
         }
-        if(constantValue==1)
-            disp = labelLoc;
+        if(constantValue==1) // if operand was constant value
+            disp = labelLoc; // set disp to labelLoc 
         else 
             disp = labelLoc - LOCCTR;
         
-        if(format==3){
-        if(-2048 <=  disp && disp <= 2047 && constantValue != 1) {
+        if(format==3){ // FORMAT 3
+        if(-2048 <=  disp && disp <= 2047 && constantValue != 1) { // PC relative
             p = 1;
             b = 0;
             if(disp < 0) 
                  disp = 0x1000 + disp;
-        }else if (disp <= 4095 && constantValue != 1) {  //BASE relativ로 표현 가능한가?
+        }else if (disp <= 4095 && constantValue != 1) {  // BASE relative
             disp = labelLoc - baseLoc;
             b = 1;
             p = 0;
@@ -913,47 +914,47 @@ long calculateObjectCode(char * line){ // returns the object for the given line
             p = 0;
         }
         }else{ // format 4 
-            disp = labelLoc; 
+            disp = labelLoc; // use absolute address instead of relative addressing
             b = 0;
             p = 0; 
         }
-        objectCode = objectCode << 12;   
-        objectCode = opcode;      
+        objectCode = opcode;      // add n,i,x,b,p,e 
         objectCode = objectCode + n*2 + i;   
         objectCode = objectCode << 4;
         objectCode = objectCode + x*8 + b*4 + p*2 + e; 
 
         if(format==4){
-            objectCode = objectCode << 20;
+            objectCode = objectCode << 20; // shift 20 bits if format 4
         }else
-            objectCode = objectCode << 12; 
-        objectCode += disp; 
+            objectCode = objectCode << 12;  // shift 12 bits if format 3
+
+        objectCode += disp; // add displacement or address to object code 
     }
    return objectCode;
 }
-void printObjectFile(){
+void printObjectFile(){ // print T node to object file and initialize the linked list 
     Obj_Element * rem;
-    fprintf(objFile,"T%06lX", T_head->address );
-    while(T_head != NULL){
+    fprintf(objFile,"T%06lX", T_head->address); // print the starting address
+    while(T_head != NULL){ // loop until the end of list
         rem = T_head;
         T_head = T_head->next;
-        fprintf(objFile,"%s", rem->objcode);
-        free(rem);
-        }
-    T_head = NULL;
+        fprintf(objFile,"%s", rem->objcode); // print object code
+        free(rem); // free the node
+    }
+    T_head = NULL; // initialize head and last to null
     T_last = NULL;
-    fprintf(objFile,"\n");
+    fprintf(objFile,"\n"); // print new line 
 }
 int passTwo(char * asmFileName){
     char objName [200];
     char lstName [200];
-    memset(lstName,0,sizeof(lstName));
+    memset(lstName,0,sizeof(lstName)); // initalize array
     memset(objName,0,sizeof(objName));
-    strcpy(objName,filename);
+    strcpy(objName,filename); // copy the file name 
     strcpy(lstName,filename);
-    strcat(objName,".obj");
+    strcat(objName,".obj"); // add extensions
     strcat(lstName,".lst");
-    objFile = fopen(objName,"w");
+    objFile = fopen(objName,"w"); 
     FILE *asmFile = fopen(asmFileName,"r");
     FILE *lstFile = fopen(lstName,"w");
     Obj_Element * rem;
@@ -968,44 +969,44 @@ int passTwo(char * asmFileName){
     int numOfLines = 0;
     char line[line_size];
     if(asmFile==NULL){
-        printf("file not found\n");
+        printf("Failed to assemble. File named %s not found\n",asmFileName);
         return ERROR;
     }
     while(1){
-       c = fgetc(asmFile);
-      if( feof(asmFile) ) {
+       c = fgetc(asmFile); // read each character in the file 
+      if( feof(asmFile) ) { // break if reached end of file 
          break ;
       }
-      if(c=='\n'){
-          numOfLines+=5;
+      if(c=='\n'){ // for every new line
+          numOfLines+=5; // increment line number
           needToPrint = 1; 
-          parseLine(line,1);
-          memset(TEMP_BUFFER,0,sizeof(TEMP_BUFFER));
-          if(startFound==1){
-              fprintf(objFile,"H%s\t%012lX\n",title,endLoc);
+          parseLine(line,1); // parse line to increment LOCCTR and seperate operands
+          memset(TEMP_BUFFER,0,sizeof(TEMP_BUFFER)); // intialize buffer
+          if(startFound==1){ // START is found 
+              fprintf(objFile,"H%s\t%012lX\n",title,endLoc); // print H node 
               startFound = 2; 
           }
-          if(needToPrint){
+          if(needToPrint){ // if the line was not a comment or variable 
             if(firstExecLoc==-1){
-                firstExecLoc = previousLOCCTR; 
+                firstExecLoc = previousLOCCTR; // store location of first executable code
             }
-            objectCode = calculateObjectCode(line);
-           if(objectCode >= 0){
-               if(isX){
+            objectCode = calculateObjectCode(line); // calculate object code
+           if(objectCode >= 0){ // if object code was calculated 
+               if(isX){ // for hexadecimal 
                     fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%02lX\n", numOfLines,previousLOCCTR,line,objectCode);
                     sprintf(TEMP_BUFFER,"%02lX",objectCode);
-                    if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) {
+                    if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) { // print T records if buffer is full 
                         printObjectFile();
                     }
-                    insertObjectCode(previousLOCCTR,TEMP_BUFFER);
-                }else if(isConstant){
+                    insertObjectCode(previousLOCCTR,TEMP_BUFFER); // insert new object code 
+                }else if(isConstant){ // for constant 
                      fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
                      sprintf(TEMP_BUFFER,"%lX",objectCode); 
-                    if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) {
+                    if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) { // print T record if buffer is full
                          printObjectFile();
                     }
-                     insertObjectCode(previousLOCCTR,TEMP_BUFFER);
-               }else if(format==1|| format==2 || strcmp(trueMnemonic,"RSUB")==0 ){
+                     insertObjectCode(previousLOCCTR,TEMP_BUFFER); // insert new object code
+               }else if(format==1|| format==2 || strcmp(trueMnemonic,"RSUB")==0 ){ 
                         fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t",numOfLines,previousLOCCTR,line);
                    if(numWord==2 || (numWord==3 && strcmp(operand[locationOfMnemonic+1],"X")==0)||strcmp(trueMnemonic,"RSUB")==0)  
                         fprintf(lstFile,"\t");
@@ -1030,13 +1031,11 @@ int passTwo(char * asmFileName){
                    insertRelocationNode(previousLOCCTR);
                 }
             }else{
-                if(objectCode==-2){
-                    printf("i am here\n");
-                    printf("%s\n",line);
+                if(objectCode==-2){  // ERROR in assembly code 
                     return ERROR;
                 }
-                if(isVariable&&T_head!=NULL&&T_last!=NULL){
-                       printObjectFile();
+                if(isVariable&&T_head!=NULL&&T_last!=NULL){ // for every variable statement
+                       printObjectFile(); // empty the object linked list and print the content
                 }
                 fprintf(lstFile, "%-5d\t%04lX\t%-12s\n", numOfLines,previousLOCCTR,line);
             }
@@ -1068,9 +1067,9 @@ int passTwo(char * asmFileName){
         R_head = NULL;
         R_last = NULL;
     }
-    fprintf(objFile,"E%06lX\n",firstExecLoc);
+    fprintf(objFile,"E%06lX\n",firstExecLoc); // print E node 
     fclose(lstFile);
-    fclose(asmFile); 
+    fclose(asmFile); // close files 
     fclose(objFile);
     return SUCCESS;
 }
