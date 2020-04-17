@@ -37,10 +37,26 @@ typedef struct Symbol_Element{
     struct Symbol_Element* next;
 }Symbol_Element;
 
+typedef struct Obj_Element{
+    long address; 
+    char * objcode;
+}Obj_Element;
+
+typedef struct Relocation_Element{
+    long startingAddr;
+    long length;
+    struct Relocation_Element* next;
+}Relocation_Element;
+
+
 h_node head;  // points to the head of linked list of history node
 h_node current; // points to the current node of history node 
 Table_Element * HashTable [MAX_HASH_SIZE]; // hash table used to store opcode info 
 Symbol_Element * SymbolTable [SYMBOL_HASH_SIZE]; 
+Obj_Element * T_head;
+Obj_Element * T_last;
+Relocation_Element * R_head;
+Relocation_Element * R_last;
 
 /// CONSTANTS used for printing out errors in printErrorMessage function 
 const int ERROR_PARAMETER = -1;
@@ -81,8 +97,7 @@ int format;
 long baseLoc;
 int isConstant;
 int isX;
-char BUFFER[100] = {0}; 
-char BUFFER_OPERAND[100] = {0};
+char TEMP_BUFFER [100] = {0}; 
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************
