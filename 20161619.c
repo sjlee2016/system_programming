@@ -821,7 +821,7 @@ long calculateObjectCode(char * line){ // returns the object for the given line
     opcode = getOpcode(trueMnemonic,1); // get Opcode from mnemonic 
 
     if(strcmp(trueMnemonic,"RSUB")==0){ // if mnemonic is RSUB 
-        objectCode += opcode+3; 
+        objectCode = opcode+3; // n = 1 i = 1 since it's simple addressing 
         objectCode = objectCode << 16; // format 3 
         return objectCode;
     }
@@ -945,7 +945,7 @@ void printObjectFile(){ // print T node to object file and initialize the linked
     T_last = NULL;
     fprintf(objFile,"\n"); // print new line 
 }
-int passTwo(char * asmFileName){
+int passTwo(char * asmFileName){ // read each line in assembly file and generates .lst and .obj file
     char objName [200];
     char lstName [200];
     memset(lstName,0,sizeof(lstName)); // initalize array
@@ -972,7 +972,7 @@ int passTwo(char * asmFileName){
         printf("Failed to assemble. File named %s not found\n",asmFileName);
         return ERROR;
     }
-    while(1){
+    while(i < line_size){
        c = fgetc(asmFile); // read each character in the file 
       if( feof(asmFile) ) { // break if reached end of file 
          break ;
@@ -992,44 +992,32 @@ int passTwo(char * asmFileName){
             }
             objectCode = calculateObjectCode(line); // calculate object code
            if(objectCode >= 0){ // if object code was calculated 
+                 
                if(isX){ // for hexadecimal 
                     fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%02lX\n", numOfLines,previousLOCCTR,line,objectCode);
                     sprintf(TEMP_BUFFER,"%02lX",objectCode);
-                    if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) { // print T records if buffer is full 
-                        printObjectFile();
-                    }
-                    insertObjectCode(previousLOCCTR,TEMP_BUFFER); // insert new object code 
                 }else if(isConstant){ // for constant 
                      fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
                      sprintf(TEMP_BUFFER,"%lX",objectCode); 
-                    if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) { // print T record if buffer is full
-                         printObjectFile();
-                    }
-                     insertObjectCode(previousLOCCTR,TEMP_BUFFER); // insert new object code
-               }else if(format==1|| format==2 || strcmp(trueMnemonic,"RSUB")==0 ){ 
+               }else if(format==1|| format==2 || strcmp(trueMnemonic,"RSUB")==0 ){  // For format 1, 2 or  RSUB
                         fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t",numOfLines,previousLOCCTR,line);
                    if(numWord==2 || (numWord==3 && strcmp(operand[locationOfMnemonic+1],"X")==0)||strcmp(trueMnemonic,"RSUB")==0)  
                         fprintf(lstFile,"\t");
-                
-                fprintf(lstFile,"%lX\n", objectCode);
-                sprintf(TEMP_BUFFER,"%lX",objectCode);
-                
-               if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) {
-                         printObjectFile();
-                    }
-                    insertObjectCode(previousLOCCTR,TEMP_BUFFER);
+
+                    fprintf(lstFile,"%lX\n", objectCode);
+                    sprintf(TEMP_BUFFER,"%lX",objectCode);
                 }
                 else{
                     fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
                     sprintf(TEMP_BUFFER,"%06lX",objectCode);
-                      if(T_head!=NULL && LOCCTR-T_head->address > 0x1E) {
-                         printObjectFile();
-                  }
-                   insertObjectCode(previousLOCCTR,TEMP_BUFFER);
                 }
                 if(format==4&&strcmp(trueMnemonic,"JSUB")==0){
                    insertRelocationNode(previousLOCCTR);
                 }
+                if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) { // print T records if buffer is full 
+                    printObjectFile();
+                }
+                insertObjectCode(previousLOCCTR,TEMP_BUFFER); // insert new object code 
             }else{
                 if(objectCode==-2){  // ERROR in assembly code 
                     return ERROR;
@@ -1037,27 +1025,27 @@ int passTwo(char * asmFileName){
                 if(isVariable&&T_head!=NULL&&T_last!=NULL){ // for every variable statement
                        printObjectFile(); // empty the object linked list and print the content
                 }
-                fprintf(lstFile, "%-5d\t%04lX\t%-12s\n", numOfLines,previousLOCCTR,line);
+                fprintf(lstFile, "%-5d\t%04lX\t%-12s\n", numOfLines,previousLOCCTR,line); // print line # and locctr and content of line 
             }
         }
         else{
-          fprintf(lstFile, "%-5d\t\t%-12s\n", numOfLines,line);
+          fprintf(lstFile, "%-5d\t\t%-12s\n", numOfLines,line); // print only line # and content of line if not executable code 
         }
-        previousLOCCTR = LOCCTR; 
+        previousLOCCTR = LOCCTR; // store previou locctr 
         memset(line,0,sizeof(line)); // initialize input and last
         i = 0;
-      if(endFound){
-              break;
-          }
+        if(endFound){
+              break;  // stop calculating if reached END statement
+        }
       }else {
-          line[i++] = c; 
+          line[i++] = c; // if not new line, insert it to line. 
       }
      
     }
-    if(T_head!=NULL&&T_last!=NULL){
+    if(T_head!=NULL&&T_last!=NULL){ // print out the rest of the bject codes 
          printObjectFile();
     }
-    if(R_head!=NULL&&R_last!=NULL){
+    if(R_head!=NULL&&R_last!=NULL){ // print out M records 
        while(R_head != NULL){
             Relocation_Element * temp = R_head;
             R_head = R_head->next;
@@ -1073,7 +1061,7 @@ int passTwo(char * asmFileName){
     fclose(objFile);
     return SUCCESS;
 }
-int passOne(char * asmFileName){
+int passOne(char * asmFileName){ // read each line in assembly file to update symbol table and LOCCTR
     FILE *asmFile = fopen(asmFileName,"r");
     LOCCTR = 0; 
     previousLOCCTR = 0;
@@ -1083,61 +1071,61 @@ int passOne(char * asmFileName){
     char line[line_size];
     char c; 
     int i = 0; 
-    if(asmFile==NULL){
-        printf("file named %s not found in this directory\n", asmFileName);
+    if(asmFile==NULL){ // cannot open file 
+        printf("Failed to assemble. file named %s not found in this directory\n", asmFileName);
         return ERROR;
     }
-    while(1){
-       c = fgetc(asmFile);
-      if( feof(asmFile) ) {
+    while(i < line_size ){
+       c = fgetc(asmFile); // read one letter at a time
+      if( feof(asmFile) ) { // break if reached the end of file 
          break ;
       }
-      if(c=='\n'){
-          numOfLines+=5;
+      if(c=='\n'){ // for each new line
+          numOfLines+=5; // increment line number
           needToPrint = 1; 
-          if(!parseLine(line,0))
+          if(!parseLine(line,0)) // parse line to update LOCCTR and insert symbol to symbol table 
             return ERROR;
           memset(line,0,sizeof(line)); // initialize input and last
           i = 0;
-      if(endFound){
+      if(endFound){ // if reached END statement, store address to endLoc
           endLoc = previousLOCCTR; 
-              break;
-          }
+          break;
+        }
           previousLOCCTR = LOCCTR; 
       }else {
-          line[i++] = c; 
+          line[i++] = c;  // insert it to line 
       }
      
     }
-    if(!startFound){
-        printf("start is not found!\n");
+    if(!startFound){  // print error if start is not found 
+        printf("[ERROR] in assembly code. START is not found.\n");
         return ERROR;
     }
-    if(!endFound){
-        printf("end is not found!\n");
+    if(!endFound){ // print error if end is not found 
+        printf("[ERROR] in assembly code. END is not found!\n");
         return ERROR;     
     }
-    fclose(asmFile); 
+    fclose(asmFile); // close file 
     return SUCCESS;
 }
-int assemble(char * fileName){
+int assemble(char * fileName){ // assemble assembly file 
     char * err; 
     memset(base,0,sizeof(base));
-    if(strcmp(extension,"asm")!=0){
+    if(strcmp(extension,"asm")!=0){ // return error if file extension is not .asm
         printf("This machine can only assemble .asm file..\n");
         return ERROR;
     }
-    freeSymbolTable(); 
-    if(!passOne(fileName)){
+    freeSymbolTable();  // initialize symbol table 
+    if(!passOne(fileName)){ // pass 1 to update symbol table and LOCCTR 
         return ERROR; 
     } 
-    if(base[0]!='\0'){
+    if(base[0]!='\0'){ // update base register 
         baseLoc = getAddress(base);
     }
-    if(!passTwo(fileName)){
+    if(!passTwo(fileName)){ // pass 2 to generate .obj and .lst files 
         return ERROR;
     }
-    printf("successfully assembled %s\n", fileName);
+    printf("successfully assembled %s\n", fileName); 
     return SUCCESS; 
 }
 int getCommand()
