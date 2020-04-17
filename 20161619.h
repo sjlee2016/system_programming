@@ -44,7 +44,7 @@ typedef struct Obj_Element{
 }Obj_Element;
 
 typedef struct Relocation_Element{
-    long startingAddr;
+    long address;
     long length;
     struct Relocation_Element* next;
 }Relocation_Element;
@@ -98,6 +98,9 @@ int format;
 long baseLoc;
 int isConstant;
 int isVariable;
+int startFound; 
+long endLoc;
+long firstExecLoc;
 int isX;
 char TEMP_BUFFER [100] = {0}; 
 //// USER-DEFINED FUNCTIONS 
