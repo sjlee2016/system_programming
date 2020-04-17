@@ -80,13 +80,28 @@ int isSimpleInst(){
 
 int typeFile(char * file){ // print out the contents of file
     char c; 
-    FILE * in = fopen(file,"r"); ;
-    if(in==NULL){ // when file cannot be read
-        printf("file named %s is not found in the current directory\n",file);
-        return ERROR; 
+    DIR * dir; 
+    struct dirent *entry = NULL;
+    FILE * in;
+    dir = opendir("."); //현재디렉토리를 연다.
+    if(dir != NULL) {
+        while((entry = readdir(dir)) != NULL) {
+            if(strcmp(entry->d_name, file) == 0) {
+                    in = fopen(file,"r");
+                    if(in == NULL) {
+                        printf("Failed to open file named %s \n",file);
+                        return ERROR; 
+                    }
+                while ((c = getc(in)) != EOF) // print out each character
+                   putchar(c);
+                    return SUCCESS;
+                }
+        }
+            closedir(dir);
+            printf("File does not exist in the current directory\n");
+            return ERROR;
     }
-     while ((c = getc(in)) != EOF) // print out each character
-        putchar(c);
+
     fclose(in);
     return SUCCESS; 
 }
@@ -144,6 +159,10 @@ int checkFilename(){ // seperate filename and extension
         return ERROR;
     
     for(j = i; j < MAX_USER_INPUT; j++){ 
+        if(userInput[j]=='/'){
+            printf("Operand should not be a directory..\n");
+            return ERROR;  
+        }
         if(isEmpty(userInput[j])){ // break if empty 
             break; 
         }
@@ -152,6 +171,7 @@ int checkFilename(){ // seperate filename and extension
             numOfPeriod++;
         }
         if(numOfPeriod>1){ // wrong file extension 
+            printf("Wrong file format\n");
             return ERROR;
         }
         if(numOfPeriod==0 && userInput[j]!= '.'){
@@ -723,6 +743,8 @@ int parseLine( char * line, int option ){ //  parse the given line to calculate 
                 LOCCTR+=3;
             } 
         }
+        }else{
+            return ERROR;
         }
     }
     return SUCCESS;
@@ -777,7 +799,7 @@ void insertRelocationNode(long address){ // insert new relocation node into the 
         R_last = newNode;
     }
 }
-long calculateObjectCode(char * line){ // returns the object for the given line
+long calculateObjectCode(int numLine, char * line){ // returns the object for the given line
     long objectCode = 0;
     long reg = 0;
     long opcode; 
@@ -837,7 +859,7 @@ long calculateObjectCode(char * line){ // returns the object for the given line
         objectCode = objectCode << 8;
         reg = getRegisterNumber(operand[locationOfMnemonic+1]); 
         if(reg < 0){ // wrong register given 
-            printf("[ERROR] in assembly code. Wrong register input..\n");
+            printf("[ERROR in line %d] in assembly code. Wrong register input..\n", numLine);
             return -2; 
         }
         objectCode += reg;  // add register code
@@ -856,7 +878,7 @@ long calculateObjectCode(char * line){ // returns the object for the given line
             if(strcmp(operand[locationOfMnemonic+2],"X")==0) // X register used
                 x = 1;
             else if(operand[locationOfMnemonic+2][0]!='\0'){
-                printf("[ERROR] in Assembly code. 3/4 format can only have X as 2nd operand\n");
+                printf("[ERROR in line %d] in Assembly code. 3/4 format can only have X as 2nd operand\n",numLine);
                 return -2; 
             }
         }
@@ -864,7 +886,7 @@ long calculateObjectCode(char * line){ // returns the object for the given line
             e = 1;
         }
         if(numWord - locationOfMnemonic == 0){ // if there is no operand 
-            printf("[ERROR] in Assembly code. There should be an operand!\n"); 
+            printf("[ERROR in line %d] in Assembly code. There should be an operand!\n", numLine); 
             return -2;
         }
         if(operand[locationOfMnemonic+1][0]=='#'){ // immediate addressing
@@ -888,6 +910,10 @@ long calculateObjectCode(char * line){ // returns the object for the given line
 
         if(trueOperand[0]>='A' && trueOperand[0]<='Z'){ // if operand is string
             labelLoc = getAddress(trueOperand); // get address
+            if(labelLoc==-1){
+                printf("[ERROR in line %d ] in assembly code. %s is not found in symbol table\n", numLine, trueOperand);
+                return -2;
+            }
         }else{
             if(i==1){
             constantValue = 1;
@@ -946,8 +972,6 @@ void printObjectFile(){ // print T node to object file and initialize the linked
     fprintf(objFile,"\n"); // print new line 
 }
 int passTwo(char * asmFileName){ // read each line in assembly file and generates .lst and .obj file
-    char objName [200];
-    char lstName [200];
     memset(lstName,0,sizeof(lstName)); // initalize array
     memset(objName,0,sizeof(objName));
     strcpy(objName,filename); // copy the file name 
@@ -973,6 +997,7 @@ int passTwo(char * asmFileName){ // read each line in assembly file and generate
         return ERROR;
     }
     while(i < line_size){
+       
        c = fgetc(asmFile); // read each character in the file 
       if( feof(asmFile) ) { // break if reached end of file 
          break ;
@@ -990,7 +1015,7 @@ int passTwo(char * asmFileName){ // read each line in assembly file and generate
             if(firstExecLoc==-1){
                 firstExecLoc = previousLOCCTR; // store location of first executable code
             }
-            objectCode = calculateObjectCode(line); // calculate object code
+            objectCode = calculateObjectCode(numOfLines,line); // calculate object code
            if(objectCode >= 0){ // if object code was calculated 
                  
                if(isX){ // for hexadecimal 
@@ -1083,8 +1108,10 @@ int passOne(char * asmFileName){ // read each line in assembly file to update sy
       if(c=='\n'){ // for each new line
           numOfLines+=5; // increment line number
           needToPrint = 1; 
-          if(!parseLine(line,0)) // parse line to update LOCCTR and insert symbol to symbol table 
+          if(!parseLine(line,0)) {// parse line to update LOCCTR and insert symbol to symbol table 
+            printf("[ERROR in line : %d] in Assembly code. Failed to assemble.\n", numOfLines);
             return ERROR;
+          }
           memset(line,0,sizeof(line)); // initialize input and last
           i = 0;
       if(endFound){ // if reached END statement, store address to endLoc
@@ -1117,12 +1144,16 @@ int assemble(char * fileName){ // assemble assembly file
     }
     freeSymbolTable();  // initialize symbol table 
     if(!passOne(fileName)){ // pass 1 to update symbol table and LOCCTR 
+        freeSymbolTable();
         return ERROR; 
     } 
     if(base[0]!='\0'){ // update base register 
         baseLoc = getAddress(base);
     }
-    if(!passTwo(fileName)){ // pass 2 to generate .obj and .lst files 
+    if(!passTwo(fileName)){ // pass 2 to generate .obj and .lst files   
+        remove(objName);
+        remove(lstName); // delete files if failed to assemble 
+        freeSymbolTable();
         return ERROR;
     }
     printf("successfully assembled %s\n", fileName); 

@@ -103,6 +103,9 @@ long firstExecLoc;  // location of the first executable instruction
 int isX; // flag to indicate a hexadecimal constant
 char TEMP_BUFFER [100] = {0};  // used to temporary store object code 
 FILE *objFile;
+char objName [200]; // store file name for object file
+char lstName [200]; // store file name for immediate file 
+    
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************
@@ -334,7 +337,7 @@ void insertRelocationNode(long address);
  * calculateObjectCode
  * returns the object code of the given line 
  * ****************************************************/
-long calculateObjectCode(char * line);
+long calculateObjectCode(int numLine,char * line);
 
 /******************************************************
  * typeFile
