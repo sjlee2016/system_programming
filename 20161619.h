@@ -91,7 +91,7 @@ char base[100]; // stores BASE
 int needToPrint; // decides whether the object code needs to be printed
 int endFound; // flag to show that file reached END symbol 
 int numWord; // the number of seperate string in current line of assembly code
-int locationOfOpcode; // index of Mnemonic in assembly code 
+int locationOfMnemonic; // index of Mnemonic in assembly code 
 char * trueMnemonic; // stores the mnemonic after removing  + 
 int format; // stores the addressing mode of the mnemonic 
 long baseLoc; // address of the BASE register
@@ -102,7 +102,7 @@ long endLoc; // location of END in the program
 long firstExecLoc;  // location of the first executable instruction 
 int isX; // flag to indicate a hexadecimal constant
 char TEMP_BUFFER [100] = {0};  // used to temporary store object code 
-
+FILE *objFile;
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************
@@ -307,8 +307,10 @@ void showSymbol();
  * if option is 0 : for the given line of assembly code, inserts symbols
  * into SYMTAB if it exists
  * if option is 1 : does not insert symbol into SYMTAB
+ * returns 1 if successful
+ * returns 0 if there is an error
  * ****************************************************/
-void parseLine( char * line, int option);
+int parseLine( char * line, int option);
 
 /******************************************************
  * getRegisterNumber
@@ -368,3 +370,10 @@ int passOne(char * asmFileName);
  * returns 1 successful
  * ****************************************************/
 int passTwo(char * asmFileName);
+
+/******************************************************
+ * printObjectFile
+ * prints the contents of the object code linked list into the
+ * object file and free the linked list
+ * ****************************************************/
+void printObjectFile();

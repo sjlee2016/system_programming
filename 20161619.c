@@ -78,18 +78,16 @@ int isSimpleInst(){
         return ERROR; // return 0 otherwise 
 }
 
-int typeFile(char * file){
+int typeFile(char * file){ // print out the contents of file
     char c; 
     FILE * in = fopen(file,"r"); ;
-    if(in==NULL){
+    if(in==NULL){ // when file cannot be read
         printf("file named %s is not found in the current directory\n",file);
         return ERROR; 
     }
-     while ((c = getc(in)) != EOF)
+     while ((c = getc(in)) != EOF) // print out each character
         putchar(c);
-    
     fclose(in);
-
     return SUCCESS; 
 }
 int isEmpty(char c){
@@ -129,41 +127,37 @@ int isComplexInst(){
     return 0;  
 }
 
-int checkFilename(){
+int checkFilename(){ // seperate filename and extension 
     int i,j,lenF,lenE, lenT;
     int numOfPeriod = 0;
     int filenameLength = 0;
-    lenF = 0; 
-    lenE = 0;
-    lenT = 0;
-    for(int i = 0; i < 100; i++){
-        fullFileName[i] = '\0';
-        filename[i] = '\0'; 
-        extension[i] = '\0';
-    }
-    for(i = instLength; i < MAX_USER_INPUT; i++){
-        if(!isEmpty(userInput[i])){
+    lenF = 0,lenE = 0,lenT = 0;
+    memset(fullFileName,0,sizeof(fullFileName)); // reset char arrays 
+    memset(filename,0,sizeof(filename));
+    memset(extension,0,sizeof(extension));
+    for(i = instLength; i < MAX_USER_INPUT; i++){ // ignore empty space 
+        if(!isEmpty(userInput[i])){ 
             break;
         }
     }
-    if(i==MAX_USER_INPUT)
+    if(i==MAX_USER_INPUT) // no filename is given 
         return ERROR;
     
-    for(j = i; j < MAX_USER_INPUT; j++){
-        if(isEmpty(userInput[j])){
+    for(j = i; j < MAX_USER_INPUT; j++){ 
+        if(isEmpty(userInput[j])){ // break if empty 
             break; 
         }
-        if(userInput[j]=='.'){
+        if(userInput[j]=='.'){ // 
             fullFileName[lenT++] = userInput[j];
             numOfPeriod++;
         }
-        if(numOfPeriod>1){
+        if(numOfPeriod>1){ // wrong file extension 
             return ERROR;
         }
         if(numOfPeriod==0 && userInput[j]!= '.'){
-            filename[lenF++] = userInput[j]; 
+            filename[lenF++] = userInput[j];  // store the filename 
             fullFileName[lenT++] = userInput[j];
-        }else if(numOfPeriod==1 && userInput[j]!='.'){
+        }else if(numOfPeriod==1 && userInput[j]!='.'){ // store extension 
             extension[lenE++] = userInput[j]; 
             fullFileName[lenT++] = userInput[j];
         }
@@ -469,20 +463,20 @@ int getHashKey(char * mnemonic) { // returns the hash key for the following mnem
     return key%MAX_HASH_SIZE;
 }
 
-int getHashKeySymbol(char * symbol) {
+int getHashKeySymbol(char * symbol) { // returns the hash key for the symbol
     int key = 0;
-    key = symbol[0]-'A'; 
+    key = symbol[0]-'A';  // use first letter of symbol
     return key%SYMBOL_HASH_SIZE;
 }
 
-long getAddress(char * symbol){
-    int key = getHashKeySymbol(symbol); 
-    for(Symbol_Element * temp = SymbolTable[key]; temp != NULL; temp= temp -> next){
-        if(strcmp(temp->identifier,symbol)==0){
-            return temp->address;
+long getAddress(char * symbol){ // returns the address of the symbol
+    int key = getHashKeySymbol(symbol); // get hash key 
+    for(Symbol_Element * temp = SymbolTable[key]; temp != NULL; temp= temp -> next){ // loop through the linked list
+        if(strcmp(temp->identifier,symbol)==0){ // if symbol is found
+            return temp->address; // return the address
         }
     }
-    return -1;
+    return -1; // symbol not found
 }
 Table_Element * getElement(char * mnemonic){
     int key = getHashKey(mnemonic);  // finds hashkey 
@@ -493,10 +487,10 @@ Table_Element * getElement(char * mnemonic){
     }
     return NULL;
 }
-long getOpcode(char * mnemonic, int option){  // prints out opcode for the target mnemonic
+long getOpcode(char * mnemonic, int option){  // return opcode for the target mnemonic
     Table_Element * elem = getElement(mnemonic); 
     if(elem==NULL){
-        if(option==0)
+        if(option==0) // if option is 0, print out the result in the terminal
          printf("opcode is not found for %s\n", mnemonic); // if not found
      return -1;
     }else{
@@ -555,35 +549,38 @@ void insertTableElement(int opcode, char * mnemonic, char * format ){
 }
 
 int insertSymbolElement(char * identifier, long address, char * type, char * value){
-    Symbol_Element *newElem = (Symbol_Element*) malloc(sizeof(Symbol_Element)); // allocate new table element
+    Symbol_Element *newElem = (Symbol_Element*) malloc(sizeof(Symbol_Element)); // allocate new symbol element
     Symbol_Element *temp, *previous = NULL; 
-    strcpy(newElem->identifier,identifier); // copy mnemonic and format string
-    newElem->address= address;
+    strcpy(newElem->identifier,identifier); // copy identifier,type,value
     strcpy(newElem->type,type);
     strcpy(newElem->value,value);
+    newElem->address= address; // copy address
     newElem->next = NULL;
-    int key = getHashKeySymbol(identifier); // get hash key for the following mnemonic
+    int key = getHashKeySymbol(identifier); // get hash key for the following symbol
      if(SymbolTable[key]!=NULL){ //  if the element is not the first element to be inserted into the table with the specific hash key 
-        if(SymbolTable[key]->next==NULL){
-             if(strcmp(SymbolTable[key]->identifier,identifier)>0){
+        if(SymbolTable[key]->next==NULL){ // if there is only one element in the list
+             if(strcmp(SymbolTable[key]->identifier,identifier)==0){ // if the new node comes first 
+                printf("[Error] in Assembly code.  Symbol, %s is already defined\n", identifier); 
+                return ERROR; 
+             }else if(strcmp(SymbolTable[key]->identifier,identifier)>0){ // if the new node comes first 
                   newElem->next = SymbolTable[key];
                   SymbolTable[key] = newElem;
              }else{
-                 SymbolTable[key]->next = newElem;
+                 SymbolTable[key]->next = newElem; // else add it to end of the element
              }
              return SUCCESS; 
         }
-        for(temp = SymbolTable[key];  temp->next != NULL; temp=temp->next){
-            if(strcmp(temp->identifier,identifier)==0){
-                printf("Symbol is already defined\n"); 
+        for(temp = SymbolTable[key];  temp->next != NULL; temp=temp->next){ // loop through the linked list
+            if(strcmp(temp->identifier,identifier)==0){ // ERROR in the assembly code
+                printf("[Error] in Assembly code.  Symbol, %s is already defined\n", identifier); 
                 return ERROR; 
-            }else if(strcmp(temp->identifier,identifier)>0){
-                if(previous==NULL){
+            }else if(strcmp(temp->identifier,identifier)>0){ // if the new node comes first
+                if(previous==NULL){ // if there is no previous node
                     newElem->next = temp; 
                     SymbolTable[key] = newElem;
                     return SUCCESS;
                 }else {
-                    newElem->next = previous->next;
+                    newElem->next = previous->next; // insert it after previous
                     previous->next = newElem; 
                     return SUCCESS;
                 }
@@ -598,123 +595,127 @@ int insertSymbolElement(char * identifier, long address, char * type, char * val
         return SUCCESS;
     }
 }
-void freeSymbolTable(){
-    for(int i = 0 ; i <= SYMBOL_HASH_SIZE-1; i++) {
-        Symbol_Element *remove_node = SymbolTable[i];
-        while(remove_node != NULL && SymbolTable[i] != NULL) {
+void freeSymbolTable(){ // erase symbol table 
+    for(int i = 0 ; i <= SYMBOL_HASH_SIZE-1; i++) { // loop through every hash key
+        Symbol_Element *remove_node = SymbolTable[i]; // get head of the table
+        while(remove_node != NULL && SymbolTable[i] != NULL) { // free each node
                 free(remove_node);
                 SymbolTable[i] = SymbolTable[i]->next;
                 remove_node = SymbolTable[i];
         }
     }
 }
-long getByteSize(char * str){
+long getByteSize(char * str){ // return byte size of the string
     long count = 0;
     char * err;
-    if(str[0]=='C'){
+    if(str[0]=='C'){ // if first character indicate it is char
         for(int i = 1 ; i < strlen(str); i++){
-            if(str[i]!='\''){
+            if(str[i]!='\''){ // count the num
                 count++;
             }
         }
-    }else if(str[0]=='X'){
+    }else if(str[0]=='X'){ // if the first character is X, it is 1 byte 
         count = 1; 
     }else{
-            return strtol(str,&err,10);
+        return strtol(str,&err,10); // convert the decimal number 
     }
     return count; 
 }
-void parseLine( char * line, int option ){
+int parseLine( char * line, int option ){ //  parse the given line to calculate the location of the mnemonic,* addressing mode and seperate the operands 
     int variableOrConstant = 0;
     int numChar = 0;
     int needToIncrement = 0; 
     char * err;
     numWord = 0;
-    locationOfOpcode = -1;
+    locationOfMnemonic = -1;
     format = 0;  
     isVariable = 0;
-    for(int i = 0; i < 5; i++){
-        for(int j = 0 ; j < 20; j++)
-          operand[i][j] = '\0'; 
-    }
-    if(line[0]=='.'){
-        needToPrint = 0;
-        return;
+    memset(operand,0,sizeof(operand)); // reset content of operand
+    if(line[0]=='.'){ // no need to do any calculation for comments 
+        needToPrint = 0; // indicate LOCCTR and object code doesnt need to be printed
+        return SUCCESS;
     }
 
-    for(int i = 0; i < line_size-1; i++){
-        if(line[i]=='\0' || line[i]=='\n'){
+    for(int i = 0; i < line_size; i++){ // loop through the line and seperate the line to store each operands 
+        if(line[i]=='\0' || line[i]=='\n'){ // break if end of line
             break;
         }
-        if(!isEmpty(line[i])&&line[i]!=','){
+        if(!isEmpty(line[i])&&line[i]!=','){  // store content if not comma or empty space
             operand[numWord][numChar++] = line[i]; 
             needToIncrement = 1; 
-            if(isEmpty(line[i+1])|| line[i+1]==','){
-                numWord++;
-                numChar = 0;
+            if(isEmpty(line[i+1])|| line[i+1]==','){ // if the next character is empty or comma
+                numWord++; // increment numWord to store the next operand
+                numChar = 0; // initialize numChar 
             }
         }
     }
-    if(getOpcode(operand[0],1)==-1 ){ // Not Opcode 
-        if(strcmp(operand[0],"BASE")==0){
-            strcpy(base,operand[1]);
+
+    if(getOpcode(operand[0],1)==-1 ){ // When first operand is not mnemonic
+        if(strcmp(operand[0],"BASE")==0){ // do not need to print LOCCTR and object code for BASE
+            strcpy(base,operand[1]); // copy the operand 
             needToPrint = 0;
         }
-        else if(strcmp(operand[1],"START")==0){
-            strcpy(title,operand[0]);
-            LOCCTR = strtol(operand[2], &err, 16);
+        else if(strcmp(operand[1],"START")==0){  // START indicates the name of program and starting address
+            strcpy(title,operand[0]); // copy the title
+            LOCCTR = strtol(operand[2], &err, 16); // set LOCCTR
             needToPrint = 0;  
             startFound = 1;   
-        } else if(strcmp(operand[0], "END")==0){
-            LOCCTR += 1;
+        } else if(strcmp(operand[0], "END")==0){ // END indicates the end of instruction
+            LOCCTR += 1; // increment LOCCTR by 1 
             endFound = 1; 
             needToPrint = 0;
-        }else if(strcmp(operand[1],"RESB")==0){
-            LOCCTR += getByteSize(operand[2]);
+        }else if(strcmp(operand[1],"RESB")==0){ // RESB symbol 
+            LOCCTR += getByteSize(operand[2]); // increment by byte size of operand 2
             variableOrConstant = 1;
             isVariable = 1;
-        }else if(strcmp(operand[1],"RESW")==0){
-            LOCCTR += 3*getByteSize(operand[2]);
+        }else if(strcmp(operand[1],"RESW")==0){ // RESW symbol
+            LOCCTR += 3*getByteSize(operand[2]); // increment by 3 * byte size of operand 2
             variableOrConstant = 1;
             isVariable = 1;
-        }else if(strcmp(operand[1],"WORD")==0){
-            LOCCTR += 3*getByteSize(operand[2]);
+        }else if(strcmp(operand[1],"WORD")==0){ // WORD symbol
+            LOCCTR += 3*getByteSize(operand[2]); // increment by 3* byte size of operand 2
             variableOrConstant = 1;
-        }else if(strcmp(operand[1],"BYTE")==0){
-            LOCCTR += getByteSize(operand[2]);
+        }else if(strcmp(operand[1],"BYTE")==0){ // BYTE Symbol
+            LOCCTR += getByteSize(operand[2]); // increment by byte size of operand 2
             variableOrConstant = 1;
-        }else {
+        }else {   // insert new symbol, which are name of sub-routines
             if(numWord == 3 ){
-                if(option==0)
-                    insertSymbolElement(operand[0],previousLOCCTR,"ROUTINE","ROUTINE"); 
-            locationOfOpcode = 1;
+                if(option==0){ // insert it to symbol table 
+                    if(!insertSymbolElement(operand[0],previousLOCCTR,"ROUTINE","ROUTINE")){
+                        return ERROR;
+                    } 
+                }
+            locationOfMnemonic = 1; // set the index of opcode 
             }else
-                locationOfOpcode = 0; 
+                locationOfMnemonic = 0; 
         }
-        if(variableOrConstant){
-             if(option==0)
-                insertSymbolElement(operand[0],previousLOCCTR,operand[1],operand[2]);  
-             locationOfOpcode = -1;
+        if(variableOrConstant){ // insert variable or constant symbol 
+             if(option==0){
+                if(!insertSymbolElement(operand[0],previousLOCCTR,operand[1],operand[2])){
+                    return ERROR;
+                }  
+             }
+             locationOfMnemonic = -1; // mnemonic not found 
         }
     }else{
-        locationOfOpcode = 0; 
+        locationOfMnemonic = 0; // mnemonic is found in first operand
     }
-    if(locationOfOpcode>=0){
-        trueMnemonic = (char*)malloc(sizeof(operand[locationOfOpcode]));
-        strcpy(trueMnemonic,operand[locationOfOpcode]);
-    if(operand[locationOfOpcode][0]=='+'){
-        format = 4;
-        trueMnemonic = strtok(trueMnemonic ,"+");
+    if(locationOfMnemonic>=0){ // if there is mnemonic 
+        trueMnemonic = (char*)malloc(sizeof(operand[locationOfMnemonic])); // copy the contents to trueMnemonic
+        strcpy(trueMnemonic,operand[locationOfMnemonic]);
+    if(operand[locationOfMnemonic][0]=='+'){ // if there is + in the first letter
+        format = 4; // addressing mode is four
+        trueMnemonic = strtok(trueMnemonic ,"+"); // remove + from the string
     }
-        Table_Element *elem = getElement(trueMnemonic);
+        Table_Element *elem = getElement(trueMnemonic); // get element from opcode table 
         if(elem!=NULL){
-        if(strcmp(elem->format,"1")==0){
+        if(strcmp(elem->format,"1")==0){ // increment LOCCTR by 1 if format 1 
             LOCCTR++;
             format = 1;
-        }else if(strcmp(elem->format,"2")==0){
+        }else if(strcmp(elem->format,"2")==0){ // increment LOCCTR by 2 if format 2 
             LOCCTR+=2;
             format = 2;
-        }else if(strcmp(elem->format,"3/4")==0){
+        }else if(strcmp(elem->format,"3/4")==0){ // increment LOCCTR accordingly
             if(format==4){
                 LOCCTR+=4;
             }else{
@@ -724,9 +725,9 @@ void parseLine( char * line, int option ){
         }
         }
     }
-    
+    return SUCCESS;
 } 
-long getRegisterNumber(char * r){
+long getRegisterNumber(char * r){ // returns the register number for the given character
     long objcode = 0;
     if(strcmp(r,"A") == 0) {
         objcode += 0;
@@ -748,35 +749,35 @@ long getRegisterNumber(char * r){
         objcode += 9;
     }else 
         return -1;
-    return objcode*16; 
+    return objcode*16; // return in hexadecimal  
 }
-void insertObjectCode(long address, char * objcode){
-    Obj_Element * newNode = (Obj_Element*)malloc(sizeof(Obj_Element));
-    newNode->objcode = (char*)malloc(sizeof(char)*strlen(objcode));
-    strcpy(newNode->objcode,objcode);
+void insertObjectCode(long address, char * objcode){ // insert new object code into the linked list
+    Obj_Element * newNode = (Obj_Element*)malloc(sizeof(Obj_Element)); // allocate memory for element
+    newNode->objcode = (char*)malloc(sizeof(char)*strlen(objcode)); // allocate memory for char array
+    strcpy(newNode->objcode,objcode); // copy object code and address
     newNode->address = address;
     newNode->next = NULL;
-    if(T_head==NULL){
-        T_head = newNode;
+    if(T_head==NULL){ // if list is empty
+        T_head = newNode; // update head and last
         T_last = T_head;
     }else{
-        T_last->next = newNode;
-        T_last = newNode;
+        T_last->next = newNode; // add next to last
+        T_last = newNode; // update last
     }
 }
-void insertRelocationNode(long address){
-   Relocation_Element * newNode = (Relocation_Element*)malloc(sizeof(Relocation_Element));
+void insertRelocationNode(long address){ // insert new relocation node into the linked list
+   Relocation_Element * newNode = (Relocation_Element*)malloc(sizeof(Relocation_Element)); // allocate memory
    newNode->address = address;
    newNode->next = NULL;
-    if(R_head==NULL){
-        R_head = newNode;
+    if(R_head==NULL){ // if no element in the list
+        R_head = newNode; // update head and last
         R_last = R_head;
     }else{
-        R_last->next = newNode;
+        R_last->next = newNode; // add at the end of list
         R_last = newNode;
     }
 }
-long calculateObjectCode(char * line){
+long calculateObjectCode(char * line){ // returns the object for the given line
     long objectCode = 0;
     long reg = 0;
     long opcode; 
@@ -792,50 +793,56 @@ long calculateObjectCode(char * line){
     char * trueOperand; 
     char v[100];
     memset(v,0,sizeof(v));
-    if(locationOfOpcode==-1&&numWord>=2){
+    if(locationOfMnemonic==-1&&numWord>=2){ // calculate object code for constants 
         if(strcmp(operand[numWord-2],"BYTE")==0|| strcmp(operand[numWord-2],"WORD")==0){
-        if(operand[numWord-1][0]=='X'){
+        if(operand[numWord-1][0]=='X'){ // for hexadecimal 
             for(int i = 1; i < strlen(operand[numWord-1]);i++){
-                if(operand[numWord-1][i]!='\''){
-                    v[j++] =operand[numWord-1][i];
+                if(operand[numWord-1][i]!='\''){ 
+                    v[j++] =operand[numWord-1][i]; // copy the contents to v 
                 }
             }
-            isX = 1;
-            objectCode = strtol(v,&err,16);
-        }else if(operand[numWord-1][0]=='C'){
+            isX = 1; // set flag 
+            objectCode = strtol(v,&err,16);  // convert hexadecimal to long 
+        }else if(operand[numWord-1][0]=='C'){ // for characters 
             for(int i = 1; i < strlen(operand[numWord-1]);i++){
                 if(operand[numWord-1][i]!='\''){
-                    objectCode *= 256;
+                    objectCode *= 256;  // convert ASCII code to hexadecimal 
                     objectCode += operand[numWord-1][i];
                 }
             }
-            isConstant = 1;
+            isConstant = 1; // set flag 
         }
         return objectCode;  
-        }else
-            return -1;
+        }else{
+            return -1;  // mnemonic is not found and it is not constant, then ERROR
+        }
     }
-    opcode = getOpcode(trueMnemonic,1); 
-    if(strcmp(trueMnemonic,"RSUB")==0){
+
+    opcode = getOpcode(trueMnemonic,1); // get Opcode from mnemonic 
+
+    if(strcmp(trueMnemonic,"RSUB")==0){ // if mnemonic is RSUB 
         objectCode += opcode+3; 
-        objectCode = objectCode << 16;
+        objectCode = objectCode << 16; // format 3 
         return objectCode;
     }
-    if(format==1)
-        return opcode;
-    
-    if(format==2 && numWord - locationOfOpcode >= 1 ){
+
+    if(format==1){  // object code is the opcode if it is format 1 
+        objectCode = opcode;
+        objectCode = objectCode << 8; 
+        return objectCode; 
+    } 
+    if(format==2 && numWord - locationOfMnemonic >= 1 ){
         objectCode = opcode; 
         objectCode = objectCode << 8;
-        reg = getRegisterNumber(operand[locationOfOpcode+1]); 
-        if(reg < 0){
-            printf("Wrong register input..\n");
-            return -1; 
+        reg = getRegisterNumber(operand[locationOfMnemonic+1]); 
+        if(reg < 0){ // wrong register given 
+            printf("[ERROR] in assembly code. Wrong register input..\n");
+            return -2; 
         }
         objectCode += reg;  
         objectCode = objectCode << 4;
-        if(numWord - locationOfOpcode >= 2){
-            reg = getRegisterNumber(operand[locationOfOpcode+2]);
+        if(numWord - locationOfMnemonic >= 2){
+            reg = getRegisterNumber(operand[locationOfMnemonic+2]);
             if(reg > 0){ 
                 objectCode += reg; 
             }
@@ -844,10 +851,10 @@ long calculateObjectCode(char * line){
         return objectCode;
     }else{
         objectCode = opcode;
-        if(numWord-locationOfOpcode > 2){
-            if(strcmp(operand[locationOfOpcode+2],"X")==0) // X register used
+        if(numWord-locationOfMnemonic > 2){
+            if(strcmp(operand[locationOfMnemonic+2],"X")==0) // X register used
                 x = 1;
-            else if(operand[locationOfOpcode+2][0]!='\0'){
+            else if(operand[locationOfMnemonic+2][0]!='\0'){
                 printf("3/4 format can only have X as 2nd operand\n");
                 return -1; 
             }
@@ -855,25 +862,25 @@ long calculateObjectCode(char * line){
         if(format==4){
             e = 1;
         }
-        if(numWord - locationOfOpcode == 0){
+        if(numWord - locationOfMnemonic == 0){
             printf("should be an operand!\n"); 
             return -1;
         }
-        if(operand[locationOfOpcode+1][0]=='#'){ // immediate
-            trueOperand = (char*)malloc(sizeof(operand[locationOfOpcode+1]));
-             strcpy( trueOperand ,operand[locationOfOpcode+1]);
+        if(operand[locationOfMnemonic+1][0]=='#'){ // immediate
+            trueOperand = (char*)malloc(sizeof(operand[locationOfMnemonic+1]));
+             strcpy( trueOperand ,operand[locationOfMnemonic+1]);
              trueOperand = strtok( trueOperand ,"#");
              n = 0;
              i = 1;
-        }else if(operand[locationOfOpcode+1][0]=='@'){ // indirect
-             trueOperand = (char*)malloc(sizeof(operand[locationOfOpcode+1]));
-             strcpy( trueOperand ,operand[locationOfOpcode+1]);
+        }else if(operand[locationOfMnemonic+1][0]=='@'){ // indirect
+             trueOperand = (char*)malloc(sizeof(operand[locationOfMnemonic+1]));
+             strcpy( trueOperand ,operand[locationOfMnemonic+1]);
              trueOperand = strtok( trueOperand ,"@");
              n = 1; 
              i = 0;
         }else { // simple 
-             trueOperand = (char*)malloc(sizeof(operand[locationOfOpcode+1]));
-             strcpy( trueOperand ,operand[locationOfOpcode+1]);
+             trueOperand = (char*)malloc(sizeof(operand[locationOfMnemonic+1]));
+             strcpy( trueOperand ,operand[locationOfMnemonic+1]);
              n = 1;
              i = 1;
         }
@@ -924,6 +931,19 @@ long calculateObjectCode(char * line){
     }
    return objectCode;
 }
+void printObjectFile(){
+    Obj_Element * rem;
+    fprintf(objFile,"T%06lX", T_head->address );
+    while(T_head != NULL){
+        rem = T_head;
+        T_head = T_head->next;
+        fprintf(objFile,"%s", rem->objcode);
+        free(rem);
+        }
+    T_head = NULL;
+    T_last = NULL;
+    fprintf(objFile,"\n");
+}
 int passTwo(char * asmFileName){
     char objName [200];
     char lstName [200];
@@ -933,7 +953,7 @@ int passTwo(char * asmFileName){
     strcpy(lstName,filename);
     strcat(objName,".obj");
     strcat(lstName,".lst");
-    FILE *objFile = fopen(objName,"w");
+    objFile = fopen(objName,"w");
     FILE *asmFile = fopen(asmFileName,"r");
     FILE *lstFile = fopen(lstName,"w");
     Obj_Element * rem;
@@ -975,53 +995,26 @@ int passTwo(char * asmFileName){
                     fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%02lX\n", numOfLines,previousLOCCTR,line,objectCode);
                     sprintf(TEMP_BUFFER,"%02lX",objectCode);
                     if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) {
-                         fprintf(objFile,"T%06lX", T_head->address );
-                         while(T_head != NULL){
-                             rem = T_head;
-                             T_head = T_head->next;
-                             fprintf(objFile,"%s", rem->objcode);
-                             free(rem);
-                         }
-                     T_head = NULL;
-                     T_last = NULL;
-                     fprintf(objFile,"\n");
+                        printObjectFile();
                     }
                     insertObjectCode(previousLOCCTR,TEMP_BUFFER);
                 }else if(isConstant){
                      fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
                      sprintf(TEMP_BUFFER,"%lX",objectCode); 
                     if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) {
-                           fprintf(objFile,"T%06lX", T_head->address );
-                         while(T_head != NULL){
-                             rem = T_head;
-                             T_head = T_head->next;
-                             fprintf(objFile,"%s", rem->objcode);
-                             free(rem);
-                         }
-                     T_head = NULL;
-                     T_last = NULL;
-                     fprintf(objFile,"\n");
+                         printObjectFile();
                     }
                      insertObjectCode(previousLOCCTR,TEMP_BUFFER);
                }else if(format==1|| format==2 || strcmp(trueMnemonic,"RSUB")==0 ){
                         fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t",numOfLines,previousLOCCTR,line);
-                   if(numWord==2 || (numWord==3 && strcmp(operand[locationOfOpcode+1],"X")==0)||strcmp(trueMnemonic,"RSUB")==0)  
+                   if(numWord==2 || (numWord==3 && strcmp(operand[locationOfMnemonic+1],"X")==0)||strcmp(trueMnemonic,"RSUB")==0)  
                         fprintf(lstFile,"\t");
                 
                 fprintf(lstFile,"%lX\n", objectCode);
                 sprintf(TEMP_BUFFER,"%lX",objectCode);
                 
                if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) {
-                          fprintf(objFile,"T%06lX", T_head->address );
-                         while(T_head != NULL){
-                             rem = T_head;
-                             T_head = T_head->next;
-                             fprintf(objFile,"%s", rem->objcode);
-                             free(rem);
-                         }
-                     T_head = NULL;
-                     T_last = NULL;
-                     fprintf(objFile,"\n");
+                         printObjectFile();
                     }
                     insertObjectCode(previousLOCCTR,TEMP_BUFFER);
                 }
@@ -1029,16 +1022,7 @@ int passTwo(char * asmFileName){
                     fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
                     sprintf(TEMP_BUFFER,"%06lX",objectCode);
                       if(T_head!=NULL && LOCCTR-T_head->address > 0x1E) {
-                           fprintf(objFile,"T%06lX", T_head->address );
-                          while(T_head != NULL){
-                              rem = T_head;
-                              T_head = T_head->next;
-                             fprintf(objFile,"%s", rem->objcode);
-                            free(rem);
-                      }
-                     T_head = NULL;
-                     T_last = NULL;
-                     fprintf(objFile,"\n");
+                         printObjectFile();
                   }
                    insertObjectCode(previousLOCCTR,TEMP_BUFFER);
                 }
@@ -1046,20 +1030,13 @@ int passTwo(char * asmFileName){
                    insertRelocationNode(previousLOCCTR);
                 }
             }else{
-                if(isVariable&&T_head!=NULL&&T_last!=NULL){
-                     if(T_head!=NULL ) {
-                          
-                        fprintf(objFile,"T%06lX", T_head->address );
-                          while(T_head != NULL){
-                              rem = T_head;
-                              T_head = T_head->next;
-                              fprintf(objFile,"%s", rem->objcode);
-                            free(rem);
-                      }
-                     T_head = NULL;
-                     T_last = NULL;
-                     fprintf(objFile,"\n");
+                if(objectCode==-2){
+                    printf("i am here\n");
+                    printf("%s\n",line);
+                    return ERROR;
                 }
+                if(isVariable&&T_head!=NULL&&T_last!=NULL){
+                       printObjectFile();
                 }
                 fprintf(lstFile, "%-5d\t%04lX\t%-12s\n", numOfLines,previousLOCCTR,line);
             }
@@ -1078,17 +1055,8 @@ int passTwo(char * asmFileName){
       }
      
     }
-   if(T_head!=NULL&&T_last!=NULL){
-       fprintf(objFile,"T%06lX", T_head->address );
-        while(T_head != NULL){
-           rem = T_head;
-            T_head = T_head->next;
-             fprintf(objFile,"%s", rem->objcode);
-             free(rem);
-        }
-        T_head = NULL;
-        T_last = NULL;
-        fprintf(objFile,"\n");
+    if(T_head!=NULL&&T_last!=NULL){
+         printObjectFile();
     }
     if(R_head!=NULL&&R_last!=NULL){
        while(R_head != NULL){
@@ -1128,7 +1096,8 @@ int passOne(char * asmFileName){
       if(c=='\n'){
           numOfLines+=5;
           needToPrint = 1; 
-          parseLine(line,0);
+          if(!parseLine(line,0))
+            return ERROR;
           memset(line,0,sizeof(line)); // initialize input and last
           i = 0;
       if(endFound){
@@ -1166,7 +1135,9 @@ int assemble(char * fileName){
     if(base[0]!='\0'){
         baseLoc = getAddress(base);
     }
-    passTwo(fileName); 
+    if(!passTwo(fileName)){
+        return ERROR;
+    }
     printf("successfully assembled %s\n", fileName);
     return SUCCESS; 
 }
@@ -1197,7 +1168,7 @@ int getCommand()
             resetMemory(); 
         }else if(strcmp(command,"opcodelist")==0){ // print opcode list 
             showOpcode(); 
-        }else if(strcmp(command,"symbol")==0){
+        }else if(strcmp(command,"symbol")==0){ // print symbol table 
             showSymbol();
         }
     }
@@ -1211,9 +1182,9 @@ int getCommand()
             successful = fillMemory();
         }else if(strcmp(command, "opcode") == 0 && checkParamsMnemonic()){ // opcode 
             successful = getOpcode(targetMnemonic,0);
-        }else if(strcmp(command,"type")==0 && checkFilename()){
+        }else if(strcmp(command,"type")==0 && checkFilename()){ // type 
             successful = typeFile(fullFileName); 
-        }else if(strcmp(command,"assemble")==0 && checkFilename()){
+        }else if(strcmp(command,"assemble")==0 && checkFilename()){ // assemble 
             successful = assemble(fullFileName); 
         }
     }
