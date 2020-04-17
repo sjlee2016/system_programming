@@ -645,6 +645,7 @@ int parseLine( char * line, int option ){ //  parse the given line to calculate 
     int variableOrConstant = 0;
     int numChar = 0;
     int needToIncrement = 0; 
+    int requireTwoOperands = 0;
     char * err;
     numWord = 0;
     locationOfMnemonic = -1;
@@ -659,6 +660,9 @@ int parseLine( char * line, int option ){ //  parse the given line to calculate 
     for(int i = 0; i < line_size; i++){ // loop through the line and seperate the line to store each operands 
         if(line[i]=='\0' || line[i]=='\n'){ // break if end of line
             break;
+        }
+        if(line[i]==','){
+            requireTwoOperands = 1;
         }
         if(!isEmpty(line[i])&&line[i]!=','){  // store content if not comma or empty space
             operand[numWord][numChar++] = line[i]; 
@@ -746,6 +750,10 @@ int parseLine( char * line, int option ){ //  parse the given line to calculate 
         }else{
             return ERROR;
         }
+    }
+
+    if(requireTwoOperands && operand[locationOfMnemonic+2][0]=='\0'){
+        return ERROR;
     }
     return SUCCESS;
 } 
@@ -907,7 +915,10 @@ long calculateObjectCode(int numLine, char * line){ // returns the object for th
              n = 1;
              i = 1;
         }
-
+        if(trueOperand==NULL){
+            printf("[Error in line %d] Wrong operand..\n", numLine);
+            return -2;
+        }
         if(trueOperand[0]>='A' && trueOperand[0]<='Z'){ // if operand is string
             labelLoc = getAddress(trueOperand); // get address
             if(labelLoc==-1){

@@ -24,13 +24,13 @@ BUFFER RESB   4096
 RDREC  CLEAR  X
        CLEAR  A
        CLEAR  S
-       +LDT   #4096
+       +LDT   #3
 RLOOP  TD     INPUT
        JEQ    RLOOP
        RD     INPUT
        COMPR  A, S
        JEQ    EXIT
-       STCH   BUFFER, X
+       STCH   BUFFER,X
        TIXR   T
        JLT    RLOOP
 EXIT   STX    LENGTH
