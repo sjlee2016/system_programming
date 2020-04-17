@@ -599,9 +599,13 @@ int insertSymbolElement(char * identifier, long address, char * type, char * val
     }
 }
 void freeSymbolTable(){
-      for(int i = SYMBOL_HASH_SIZE-1 ; i >= 0; i--) {
+    for(int i = 0 ; i <= SYMBOL_HASH_SIZE-1; i++) {
         Symbol_Element *remove_node = SymbolTable[i];
-        SymbolTable[i] = NULL; 
+        while(remove_node != NULL && SymbolTable[i] != NULL) {
+                free(remove_node);
+                SymbolTable[i] = SymbolTable[i]->next;
+                remove_node = SymbolTable[i];
+        }
     }
 }
 long getByteSize(char * str){

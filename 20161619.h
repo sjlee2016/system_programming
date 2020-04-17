@@ -8,7 +8,7 @@
 #define QUIT 0
 #define MAX_MEMORY_SIZE 1048576 // Arraysize to store 1 MB memory 
 #define MAX_HASH_SIZE 20  // max size for hash table 
-#define SYMBOL_HASH_SIZE 27 
+#define SYMBOL_HASH_SIZE 27   // max size for symbol hash table
 #define MAX_USER_INPUT 100 // max user input
 #define ERROR 0; // used for return value of function
 #define SUCCESS 1; 
