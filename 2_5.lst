@@ -49,4 +49,5 @@
 245  	1070	       JLT    WLOOP		3B2FEF
 250  	1073	       RSUB			4F0000
 255  	1076	OUTPUT BYTE   X'05'		05
-260  		       END    FIRST
+260  		.       END    FIRST
+265  	1077	            

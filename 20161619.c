@@ -1141,12 +1141,19 @@ int passOne(char * fileName){
           endLoc = previousLOCCTR; 
               break;
           }
-
           previousLOCCTR = LOCCTR; 
       }else {
           line[i++] = c; 
       }
      
+    }
+    if(!StartFound){
+        printf("start is not found!\n");
+        return ERROR;
+    }
+    if(!endFound){
+        printf("end is not found!\n");
+        return ERROR;     
     }
     fclose(in); 
     return SUCCESS;
