@@ -1036,7 +1036,7 @@ int passTwo(char * asmFileName){ // read each line in assembly file and generate
                     fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
                     sprintf(TEMP_BUFFER,"%06lX",objectCode);
                 }
-                if(format==4&&strcmp(trueMnemonic,"JSUB")==0){
+                if(format==4&&operand[locationOfMnemonic+1][0]!='#'&&operand[locationOfMnemonic+1][0]!='@'){ // insert format 4 and simple addressing for relocation
                    insertRelocationNode(previousLOCCTR);
                 }
                 if(T_head!=NULL&&LOCCTR-T_head->address > 0x1E) { // print T records if buffer is full 
