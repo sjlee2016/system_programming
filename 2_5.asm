@@ -15,7 +15,7 @@ ENDFIL LDA    EOF
        +JSUB  WRREC
        J      @RETADR
 EOF    BYTE   C'EOF'
-RETADR RESW   1 
+RETADR RESW   1
 LENGTH RESW   1
 BUFFER RESB   4096
 .
@@ -24,13 +24,13 @@ BUFFER RESB   4096
 RDREC  CLEAR  X
        CLEAR  A
        CLEAR  S
-       +LDT   #3
+       +LDT   #4096
 RLOOP  TD     INPUT
        JEQ    RLOOP
        RD     INPUT
        COMPR  A, S
        JEQ    EXIT
-       STCH   BUFFER,X
+       STCH   BUFFER, X
        TIXR   T
        JLT    RLOOP
 EXIT   STX    LENGTH
@@ -50,4 +50,3 @@ WLOOP  TD     OUTPUT
        RSUB
 OUTPUT BYTE   X'05'
        END    FIRST
-

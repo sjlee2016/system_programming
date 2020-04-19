@@ -971,7 +971,7 @@ long calculateObjectCode(int numLine, char * line){ // returns the object for th
 }
 void printObjectFile(){ // print T node to object file and initialize the linked list 
     Obj_Element * rem;
-    fprintf(objFile,"T%06lX", T_head->address); // print the starting address
+    fprintf(objFile,"T%06lX%02lX", T_head->address, previousLOCCTR-T_head->address); // print the starting address
     while(T_head != NULL){ // loop until the end of list
         rem = T_head;
         T_head = T_head->next;
@@ -1160,7 +1160,13 @@ int assemble(char * fileName){ // assemble assembly file
     } 
     if(base[0]!='\0'){ // update base register 
         baseLoc = getAddress(base);
-    }
+        if(baseLoc==-1){
+            printf("[ERROR in assembly code] BASE register is defined incorrectly\n");
+            return ERROR;
+        }
+    }else
+        baseLoc = 0;
+
     if(!passTwo(fileName)){ // pass 2 to generate .obj and .lst files   
         remove(objName);
         remove(lstName); // delete files if failed to assemble 
