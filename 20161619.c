@@ -685,7 +685,6 @@ int parseLine( char * line, int option ){ //  parse the given line to calculate 
             needToPrint = 0;  
             startFound = 1;   
         } else if(strcmp(operand[0], "END")==0){ // END indicates the end of instruction
-            LOCCTR += 1; // increment LOCCTR by 1 
             endFound = 1; 
             needToPrint = 0;
         }else if(strcmp(operand[1],"RESB")==0){ // RESB symbol 
@@ -997,7 +996,6 @@ int passTwo(char * asmFileName){ // read each line in assembly file and generate
     previousLOCCTR = 0;
     endFound = 0;
     firstExecLoc = -1; 
-    startFound = 0; 
     char c;
     int i = 0; 
     long objectCode;
@@ -1021,6 +1019,9 @@ int passTwo(char * asmFileName){ // read each line in assembly file and generate
           if(startFound==1){ // START is found 
               fprintf(objFile,"H%s\t%012lX\n",title,endLoc); // print H node 
               startFound = 2; 
+          }else if(startFound==0){
+              fprintf(objFile,"H%s\t%012lX\n",title,endLoc); // print H node 
+              startFound = 2;
           }
           if(needToPrint){ // if the line was not a comment or variable 
             if(firstExecLoc==-1){
@@ -1136,8 +1137,10 @@ int passOne(char * asmFileName){ // read each line in assembly file to update sy
      
     }
     if(!startFound){  // print error if start is not found 
-        printf("[ERROR] in assembly code. START is not found.\n");
-        return ERROR;
+       // printf("[ERROR] in assembly code. START is not found.\n");
+       // return ERROR;
+       LOCCTR = 0;
+       strcpy(title,"NONAME");
     }
     if(!endFound){ // print error if end is not found 
         printf("[ERROR] in assembly code. END is not found!\n");
@@ -1176,8 +1179,7 @@ int assemble(char * fileName){ // assemble assembly file
     printf("successfully assembled %s\n", fileName); 
     return SUCCESS; 
 }
-int getCommand()
-{
+int getCommand(){
     int i; 
     int successful = 0; 
     for (i = 0; i < MAX_USER_INPUT; i++)
@@ -1230,8 +1232,7 @@ int getCommand()
     return SUCCESS;
 }
 
-int main()
-{
+int main(){
     FILE * ip;
     int opcode;
     char mnemonic[7];
