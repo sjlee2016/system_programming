@@ -775,7 +775,11 @@ int parseLine( char * line, int option ){ //  parse the given line to calculate 
 } 
 long getRegisterNumber(char * r){ // returns the register number for the given character
     long objcode = 0;
-    if(strcmp(r,"A") == 0) {
+    
+    if(r[0]>='0' && r[0]<='9'){
+        objcode += strtol(r,NULL,10);  // convert hexadecimal to long 
+    }
+    else if(strcmp(r,"A") == 0) {
         objcode += 0;
     } else if(strcmp(r,"X") == 0) {
         objcode += 1;
