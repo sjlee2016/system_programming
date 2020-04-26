@@ -716,13 +716,16 @@ int parseLine( char * line, int option ){ //  parse the given line to calculate 
               LOCCTR += getByteSize(operand[2]); // increment by byte size of operand 2
             variableOrConstant = 1;
         }else {   // insert new symbol, which are name of sub-routines
-            if(numWord >= 2 ){
+            if(numWord==2 && strcmp(operand[1],"RSUB")==0){
+                locationOfMnemonic = 1;
+            }else if(numWord >= 3 ){
                 if(option==0){ // insert it to symbol table 
                     if(!insertSymbolElement(operand[0],previousLOCCTR,"ROUTINE","ROUTINE")){
                         return ERROR;
                     } 
                 }
                 locationOfMnemonic = 1; // set the index of opcode 
+            
             }else
                 locationOfMnemonic = 0; 
         }
