@@ -688,21 +688,34 @@ int parseLine( char * line, int option ){ //  parse the given line to calculate 
             endFound = 1; 
             needToPrint = 0;
         }else if(strcmp(operand[1],"RESB")==0){ // RESB symbol 
-            LOCCTR += getByteSize(operand[2]); // increment by byte size of operand 2
+              if(strcmp(operand[2],"0")==0){
+                LOCCTR += 1;
+            }else
+                LOCCTR += getByteSize(operand[2]); // increment by byte size of operand 2
             variableOrConstant = 1;
             isVariable = 1;
-        }else if(strcmp(operand[1],"RESW")==0){ // RESW symbol
-            LOCCTR += 3*getByteSize(operand[2]); // increment by 3 * byte size of operand 2
+        }else if(strcmp(operand[1],"RESW")==0){ // RESW symbol          
+             if(strcmp(operand[2],"0")==0){
+                LOCCTR += 3;
+            }else
+                LOCCTR += 3*getByteSize(operand[2]); // increment by 3 * byte size of operand 2
             variableOrConstant = 1;
             isVariable = 1;
         }else if(strcmp(operand[1],"WORD")==0){ // WORD symbol
-            LOCCTR += 3*getByteSize(operand[2]); // increment by 3* byte size of operand 2
+            if(strcmp(operand[2],"0")==0){
+                LOCCTR += 3;
+            }else
+              LOCCTR += 3*getByteSize(operand[2]); // increment by 3* byte size of operand 2
+
             variableOrConstant = 1;
         }else if(strcmp(operand[1],"BYTE")==0){ // BYTE Symbol
-            LOCCTR += getByteSize(operand[2]); // increment by byte size of operand 2
+              if(strcmp(operand[2],"0")==0){
+                LOCCTR += 1;
+            }else
+              LOCCTR += getByteSize(operand[2]); // increment by byte size of operand 2
             variableOrConstant = 1;
         }else {   // insert new symbol, which are name of sub-routines
-            if(numWord == 3 ){
+            if(numWord >= 3 ){
                 if(option==0){ // insert it to symbol table 
                     if(!insertSymbolElement(operand[0],previousLOCCTR,"ROUTINE","ROUTINE")){
                         return ERROR;
@@ -823,7 +836,7 @@ long calculateObjectCode(int numLine, char * line){ // returns the object for th
     char v[100];
     memset(v,0,sizeof(v));
     if(locationOfMnemonic==-1&&numWord>=2){ // calculate object code for constants 
-        if(strcmp(operand[numWord-2],"BYTE")==0|| strcmp(operand[numWord-2],"WORD")==0){
+        if(strcmp(operand[numWord-2],"BYTE")==0){
         if(operand[numWord-1][0]=='X'){ // for hexadecimal 
             for(int i = 1; i < strlen(operand[numWord-1]);i++){
                 if(operand[numWord-1][i]!='\''){ 
@@ -842,7 +855,12 @@ long calculateObjectCode(int numLine, char * line){ // returns the object for th
             isConstant = 1; // set flag 
         }
         return objectCode;  
-        }else{
+        }else if(strcmp(operand[numWord-2],"WORD")==0){
+            objectCode = strtol(operand[numWord-1],&err,10); // 
+               isConstant = 1; 
+               return objectCode; 
+        }
+        else{
             return -1;  // mnemonic is not found and it is not constant, then ERROR
         }
     }
@@ -1034,8 +1052,8 @@ int passTwo(char * asmFileName){ // read each line in assembly file and generate
                     fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%02lX\n", numOfLines,previousLOCCTR,line,objectCode);
                     sprintf(TEMP_BUFFER,"%02lX",objectCode);
                 }else if(isConstant){ // for constant 
-                     fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%lX\n", numOfLines,previousLOCCTR,line,objectCode);
-                     sprintf(TEMP_BUFFER,"%lX",objectCode); 
+                     fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
+                     sprintf(TEMP_BUFFER,"%06lX",objectCode); 
                }else if(format==1|| format==2 || strcmp(trueMnemonic,"RSUB")==0 ){  // For format 1, 2 or  RSUB
                         fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t",numOfLines,previousLOCCTR,line);
                    if(numWord==2 || (numWord==3 && strcmp(operand[locationOfMnemonic+1],"X")==0)||strcmp(trueMnemonic,"RSUB")==0)  

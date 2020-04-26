@@ -1,4 +1,4 @@
-COPY   START  COPY 
+COPY   START  0
 FIRST  STL    RETADR
        LDB    #LENGTH
        BASE   LENGTH
@@ -28,7 +28,7 @@ RDREC  CLEAR  X
 RLOOP  TD     INPUT
        JEQ    RLOOP
        RD     INPUT
-       COMPR  A, S
+       COMPR  A , S
        JEQ    EXIT
        STCH   BUFFER, X
        TIXR   T
@@ -50,3 +50,4 @@ WLOOP  TD     OUTPUT
        RSUB
 OUTPUT BYTE   X'05'
        END    FIRST
+
