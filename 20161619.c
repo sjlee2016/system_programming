@@ -680,6 +680,7 @@ int parseLine( char * line, int option ){ //  parse the given line to calculate 
             needToPrint = 0;
         }
         else if(strcmp(operand[1],"START")==0){  // START indicates the name of program and starting address
+            memset(title,0,sizeof(title));
             strcpy(title,operand[0]); // copy the title
             LOCCTR = strtol(operand[2], &err, 16); // set LOCCTR
             needToPrint = 0;  
@@ -715,13 +716,13 @@ int parseLine( char * line, int option ){ //  parse the given line to calculate 
               LOCCTR += getByteSize(operand[2]); // increment by byte size of operand 2
             variableOrConstant = 1;
         }else {   // insert new symbol, which are name of sub-routines
-            if(numWord >= 3 ){
+            if(numWord >= 2 ){
                 if(option==0){ // insert it to symbol table 
                     if(!insertSymbolElement(operand[0],previousLOCCTR,"ROUTINE","ROUTINE")){
                         return ERROR;
                     } 
                 }
-            locationOfMnemonic = 1; // set the index of opcode 
+                locationOfMnemonic = 1; // set the index of opcode 
             }else
                 locationOfMnemonic = 0; 
         }
@@ -763,7 +764,7 @@ int parseLine( char * line, int option ){ //  parse the given line to calculate 
             return ERROR;
         }
     }
-
+    
     if(requireTwoOperands && operand[locationOfMnemonic+2][0]=='\0'){
         return ERROR;
     }
@@ -1014,11 +1015,13 @@ int passTwo(char * asmFileName){ // read each line in assembly file and generate
     previousLOCCTR = 0;
     endFound = 0;
     firstExecLoc = -1; 
+    endLoc = 0;
     char c;
     int i = 0; 
     long objectCode;
     int numOfLines = 0;
     char line[line_size];
+    memset(line,0,sizeof(line)); // initialize input and last
     if(asmFile==NULL){
         printf("Failed to assemble. File named %s not found\n",asmFileName);
         return ERROR;
@@ -1032,6 +1035,7 @@ int passTwo(char * asmFileName){ // read each line in assembly file and generate
       if(c=='\n'){ // for every new line
           numOfLines+=5; // increment line number
           needToPrint = 1; 
+          endLoc = 0;
           parseLine(line,1); // parse line to increment LOCCTR and seperate operands
           memset(TEMP_BUFFER,0,sizeof(TEMP_BUFFER)); // intialize buffer
           if(startFound==1){ // START is found 
@@ -1051,7 +1055,7 @@ int passTwo(char * asmFileName){ // read each line in assembly file and generate
                if(isX){ // for hexadecimal 
                     fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%02lX\n", numOfLines,previousLOCCTR,line,objectCode);
                     sprintf(TEMP_BUFFER,"%02lX",objectCode);
-                }else if(isConstant){ // for constant 
+                }else if(isConstant){ // for constant
                      fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
                      sprintf(TEMP_BUFFER,"%06lX",objectCode); 
                }else if(format==1|| format==2 || strcmp(trueMnemonic,"RSUB")==0 ){  // For format 1, 2 or  RSUB
@@ -1061,10 +1065,12 @@ int passTwo(char * asmFileName){ // read each line in assembly file and generate
 
                     fprintf(lstFile,"%lX\n", objectCode);
                     sprintf(TEMP_BUFFER,"%lX",objectCode);
+                     
                 }
                 else{
                     fprintf(lstFile, "%-5d\t%04lX\t%-8s\t\t%06lX\n", numOfLines,previousLOCCTR,line,objectCode);
                     sprintf(TEMP_BUFFER,"%06lX",objectCode);
+                     
                 }
                 if(format==4&&operand[locationOfMnemonic+1][0]!='#'&&operand[locationOfMnemonic+1][0]!='@'){ // insert format 4 and simple addressing for relocation
                    insertRelocationNode(previousLOCCTR);
@@ -1080,11 +1086,12 @@ int passTwo(char * asmFileName){ // read each line in assembly file and generate
                 if(isVariable&&T_head!=NULL&&T_last!=NULL){ // for every variable statement
                        printObjectFile(); // empty the object linked list and print the content
                 }
+                 
                 fprintf(lstFile, "%-5d\t%04lX\t%-12s\n", numOfLines,previousLOCCTR,line); // print line # and locctr and content of line 
             }
         }
         else{
-          fprintf(lstFile, "%-5d\t\t%-12s\n", numOfLines,line); // print only line # and content of line if not executable code 
+          fprintf(lstFile, "%-5d\t\t%-12s\n", numOfLines,line); // print only line # and content of line if not executable code
         }
         previousLOCCTR = LOCCTR; // store previou locctr 
         memset(line,0,sizeof(line)); // initialize input and last
@@ -1126,6 +1133,7 @@ int passOne(char * asmFileName){ // read each line in assembly file to update sy
     char line[line_size];
     char c; 
     int i = 0; 
+    memset(line,0,sizeof(line));
     if(asmFile==NULL){ // cannot open file 
         printf("Failed to assemble. file named %s not found in this directory\n", asmFileName);
         return ERROR;
