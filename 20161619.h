@@ -31,9 +31,9 @@ typedef struct Table_Element{ // node for storing mnemonic information
 
 typedef struct Symbol_Element{ // node used for symbol table
     char identifier[7];
-    char type[20]; 
+    char type[10]; 
     long address;
-    char value[20];
+    char * value;
     struct Symbol_Element* next;
 }Symbol_Element;
 
@@ -82,10 +82,10 @@ char targetMnemonic[7]; // stores mnemonic from user input
 char filename[100]; // stores the file name without the extension
 char fullFileName[100]; // stores the full filename
 char extension[10]; // stores extension of the filename
-char operand[10][20]; // used to store the operands in asm file 
+char operand[10][100]; // used to store the operands in asm file 
 long LOCCTR = 0; // stores the current LOCCTR
 long previousLOCCTR = 0; // stores previous LOCCTR
-int line_size = 50; // size of line for reading asm file
+int line_size = 100; // size of line for reading asm file
 char title[100]; // stores the title of the assembly program
 char base[100]; // stores BASE 
 int needToPrint; // decides whether the object code needs to be printed
@@ -101,7 +101,7 @@ int startFound;  // flag to indicate that the file reached START symbol
 long endLoc; // location of END in the program 
 long firstExecLoc;  // location of the first executable instruction 
 int isX; // flag to indicate a hexadecimal constant
-char TEMP_BUFFER [100] = {0};  // used to temporary store object code 
+char TEMP_BUFFER [1000] = {0};  // used to temporary store object code 
 FILE *objFile;
 char objName [200]; // store file name for object file
 char lstName [200]; // store file name for immediate file 

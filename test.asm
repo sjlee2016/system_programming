@@ -18,7 +18,7 @@ GETC TD     INPUT
 	 JLT    GETC
 	 SUB    #48
 	 COMP   #10
-	 JLT    GETC
+	 JLT    RETURN
 	 SUB    #7
 RETURN	RSUB   
 INPUT BYTE  X'F1'

@@ -569,8 +569,10 @@ void insertTableElement(int opcode, char * mnemonic, char * format ){
 }
 
 int insertSymbolElement(char * identifier, long address, char * type, char * value){
+
     Symbol_Element *newElem = (Symbol_Element*) malloc(sizeof(Symbol_Element)); // allocate new symbol element
     Symbol_Element *temp, *previous = NULL; 
+    newElem->value = (char*)malloc(sizeof(value));
     strcpy(newElem->identifier,identifier); // copy identifier,type,value
     strcpy(newElem->type,type);
     strcpy(newElem->value,value);
@@ -635,7 +637,12 @@ long getByteSize(char * str){ // return byte size of the string
             }
         }
     }else if(str[0]=='X'){ // if the first character is X, it is 1 byte 
-        count = 1; 
+    for(int i = 1 ; i < strlen(str); i++){
+            if(str[i]!='\''){ // count the num
+                count++;
+            }
+        }
+        count/=2; 
     }else{
         return strtol(str,&err,10); // convert the decimal number 
     }
@@ -706,7 +713,7 @@ int parseLine( char * line, int option ){ //  parse the given line to calculate 
             if(strcmp(operand[2],"0")==0){
                 LOCCTR += 3;
             }else
-              LOCCTR += 3*getByteSize(operand[2]); // increment by 3* byte size of operand 2
+              LOCCTR += 3; // increment by 3* byte size of operand 2
 
             variableOrConstant = 1;
         }else if(strcmp(operand[1],"BYTE")==0){ // BYTE Symbol
@@ -717,6 +724,11 @@ int parseLine( char * line, int option ){ //  parse the given line to calculate 
             variableOrConstant = 1;
         }else {   // insert new symbol, which are name of sub-routines
             if(numWord==2 && strcmp(operand[1],"RSUB")==0){
+                if(option==0){ // insert it to symbol table 
+                    if(!insertSymbolElement(operand[0],previousLOCCTR,"ROUTINE","ROUTINE")){
+                        return ERROR;
+                    } 
+                }
                 locationOfMnemonic = 1;
             }else if(numWord >= 3 ){
                 if(option==0){ // insert it to symbol table 
@@ -1022,7 +1034,6 @@ int passTwo(char * asmFileName){ // read each line in assembly file and generate
     previousLOCCTR = 0;
     endFound = 0;
     firstExecLoc = -1; 
-    endLoc = 0;
     char c;
     int i = 0; 
     long objectCode;
@@ -1042,7 +1053,6 @@ int passTwo(char * asmFileName){ // read each line in assembly file and generate
       if(c=='\n'){ // for every new line
           numOfLines+=5; // increment line number
           needToPrint = 1; 
-          endLoc = 0;
           parseLine(line,1); // parse line to increment LOCCTR and seperate operands
           memset(TEMP_BUFFER,0,sizeof(TEMP_BUFFER)); // intialize buffer
           if(startFound==1){ // START is found 
@@ -1157,6 +1167,7 @@ int passOne(char * asmFileName){ // read each line in assembly file to update sy
             printf("[ERROR in line : %d] in Assembly code. Failed to assemble.\n", numOfLines);
             return ERROR;
           }
+
           memset(line,0,sizeof(line)); // initialize input and last
           i = 0;
       if(endFound){ // if reached END statement, store address to endLoc
@@ -1194,6 +1205,7 @@ int assemble(char * fileName){ // assemble assembly file
         freeSymbolTable();
         return ERROR; 
     } 
+
     if(base[0]!='\0'){ // update base register 
         baseLoc = getAddress(base);
         if(baseLoc==-1){
