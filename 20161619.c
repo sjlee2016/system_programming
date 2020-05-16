@@ -304,7 +304,7 @@ void printMem(long start, long end){
         }
         printf("; ");
         for (j = i; j < i + 16; j++){
-            if (VMemory[j] >= 20 && VMemory[j] <= 0x7E) // if the value is within the range
+            if (VMemory[j] >= 20 && VMemory[j] <= 0x7E &&  j >= start) // if the value is within the range
                 printf("%c", VMemory[j]); // print out the memory in character value 
             else
                 printf("."); // print dot otherwise
@@ -1019,6 +1019,22 @@ void printObjectFile(){ // print T node to object file and initialize the linked
     T_last = NULL;
     fprintf(objFile,"\n"); // print new line 
 }
+int setProgaddr(){
+    char * err;
+  if (numOfParams == 1) { // if two parameter values are given
+
+        long PROGADDR = strtol(params[0], &err, 16); // convert each parameter to long type
+        if (PROGADDR < 0 || PROGADDR > MAX_MEMORY_SIZE-1){ // print error message if address is out of bound 
+            printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
+            PROGADDR = 0;
+            return ERROR;
+        }
+        return SUCCESS; 
+    }else{
+        printErrorMessage(ERROR_PARAMETER); // if wrong number of parameter is given 
+        return ERROR;
+    }
+}
 int passTwo(char * asmFileName){ // read each line in assembly file and generates .lst and .obj file
     memset(lstName,0,sizeof(lstName)); // initalize array
     memset(objName,0,sizeof(objName));
@@ -1268,6 +1284,15 @@ int getCommand(){
             successful = typeFile(fullFileName); 
         }else if(strcmp(command,"assemble")==0 && checkFilename()){ // assemble 
             successful = assemble(fullFileName); 
+        }else if(strcmp(command,"loader")==0 && checkFilename()){ // loader
+            // load and link
+       }else if(strcmp(command,"progaddr")==0 && checkParams()){
+           // update progaddr 
+           successful = setProgaddr();
+        }else if(strcmp(command,"bp")==0 && checkParams()){
+            // insert break points
+        }else if(strcmp(command,"run")==0 && checkParams()){
+            // run program
         }
     }
     if(successful){ // insert to history list only if command was successful 

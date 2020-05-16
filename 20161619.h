@@ -105,7 +105,9 @@ char TEMP_BUFFER [1000] = {0};  // used to temporary store object code
 FILE *objFile;
 char objName [200]; // store file name for object file
 char lstName [200]; // store file name for immediate file 
-    
+long PROGADDR = 0;   //porgaddr 실행시 주소가 저장된다.
+long CSADDR = 0; //ESTAB구성 시 각 섹션별 시작주소가 갱신된다.
+long CSLTH = 0; //Header record에서 프로그램의 길이를 저장한다.
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************
