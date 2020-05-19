@@ -75,7 +75,7 @@ long defaultStartAddr = -1;   // default starting address for memory for dump co
 int instLength = 0; // length of the instruction (excluding unnessary inputs from user like empty space and parameters)
 int historyCount = 0; // total number of history stored 
 char simpleInsts [11][20] = {"help", "h", "dir", "d", "history","hi","quit","q", "reset","symbol","opcodelist"}; // list of instructions that does not require any parameter
-char complexInsts[9][10] = {"dump","du","edit","e","fill","f","opcode","type","assemble"}; // list of instructions that require extra parameter input 
+char complexInsts[13][10] = {"dump","du","edit","e","fill","f","opcode","type","assemble","bp","loader","progaddr","run"}; // list of instructions that require extra parameter input 
 char userInput[100]; // stores user input 
 char command[11]; // stores command from user input (excludes empty string)
 char targetMnemonic[7]; // stores mnemonic from user input 
@@ -108,6 +108,8 @@ char lstName [200]; // store file name for immediate file
 long PROGADDR = 0;   //porgaddr 실행시 주소가 저장된다.
 long CSADDR = 0; //ESTAB구성 시 각 섹션별 시작주소가 갱신된다.
 long CSLTH = 0; //Header record에서 프로그램의 길이를 저장한다.
+int numOfFile;
+FILE * objf[3];  
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************

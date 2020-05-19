@@ -129,7 +129,7 @@ void printErrorMessage(int type){ // print out error message for specific type
 
 int isComplexInst(){
     instLength = 0;
-    for (int i = 0; i < 9; i++){ // loop through complex instruction list
+    for (int i = 0; i < 13 ; i++){ // loop through complex instruction list
         instLength = strlen(complexInsts[i]); // get length of the instruction 
         if (strncmp(userInput, complexInsts[i], instLength) == 0) { // if the user input includes following instruction
             if (isEmpty(userInput[instLength])) // check if the next character is empty
@@ -1210,6 +1210,7 @@ int passOne(char * asmFileName){ // read each line in assembly file to update sy
     return SUCCESS;
 }
 int assemble(char * fileName){ // assemble assembly file 
+
     char * err; 
     memset(base,0,sizeof(base));
     if(strcmp(extension,"asm")!=0){ // return error if file extension is not .asm
@@ -1239,6 +1240,92 @@ int assemble(char * fileName){ // assemble assembly file
     }
     printf("successfully assembled %s\n", fileName); 
     return SUCCESS; 
+}
+/*
+PROJECT 3
+*/
+int handleBreakpoint(){
+    return 1; 
+}
+int loader(){
+    return SUCCESS; 
+}
+int checkObjectfile(){
+   char input[10] = "";
+   int last = 0;
+   int idx1,idx2,idx3,i;
+   char filename[100]; 
+    memset(filename,0,sizeof(filename)); // reset char arrays 
+   int previousSpace = 1; 
+   numOfFile = 0;
+   for(i  = instLength+1; i < MAX_USER_INPUT; i++){ // search the string after the instruction 
+       if(userInput[i]=='\0' || userInput[i]=='\n'){
+           break;
+       }
+       if( userInput[i]!=' ' && previousSpace==1){
+            numOfFile++;
+            if(numOfFile==1){  
+                idx1=i;  // store the location of the first comma in idx1 eg) 1,2    
+             } else if(numOfFile==2){ // if there is 2 commas 
+                idx2=i;  // store the location of second comma in idx2 eg) 1,2,3
+             }else if(numOfFile==3){
+                idx3=i; 
+             }else{
+                 printf("there can not be more than 3 object files\n");
+                 return ERROR; 
+             }
+             previousSpace = 0;
+      }else if(isEmpty(userInput[i])){
+          previousSpace = 1; 
+      }
+   }
+   if(numOfFile==0){
+       printf("Please input a filename\n");
+       return ERROR; 
+   }
+   for(int i = idx1; i < MAX_USER_INPUT; i++){
+       if(isEmpty(userInput[i])){
+           break;
+       }
+       filename[i-idx1] = userInput[i]; 
+   }
+   objf[0] = fopen(filename,"r");
+   if(objf[0]==NULL){
+       printf("filename %s not found in directory..\n",filename);
+       return ERROR;
+   }
+   if(numOfFile==1)
+        return SUCCESS;
+
+   memset(filename,0,sizeof(filename)); // reset char arrays 
+   for(int i = idx2; i < MAX_USER_INPUT; i++){
+       if(isEmpty(userInput[i])){
+           break;
+       }
+       filename[i-idx2] = userInput[i]; 
+   }
+   objf[1] = fopen(filename,"r");
+   if(objf[1]==NULL){
+       printf("filename %s not found in directory..\n",filename);
+       return ERROR;
+   }
+   if(numOfFile==2)
+        return SUCCESS; 
+
+    memset(filename,0,sizeof(filename)); // reset char arrays 
+ 
+   for(int i = idx3; i < MAX_USER_INPUT; i++){
+       if(isEmpty(userInput[i])){
+           break;
+       }
+       filename[i-idx3] = userInput[i]; 
+   }
+   objf[2] = fopen(filename,"r");
+   if(objf[2]==NULL){
+       printf("filename %s not found in directory..\n",filename);
+       return ERROR;
+   }
+   return SUCCESS;
 }
 int getCommand(){
     int i; 
@@ -1284,13 +1371,14 @@ int getCommand(){
             successful = typeFile(fullFileName); 
         }else if(strcmp(command,"assemble")==0 && checkFilename()){ // assemble 
             successful = assemble(fullFileName); 
-        }else if(strcmp(command,"loader")==0 && checkFilename()){ // loader
+        }else if(strcmp(command,"loader")==0 && checkObjectfile()){ // loader
             // load and link
+            successful = loader(); 
        }else if(strcmp(command,"progaddr")==0 && checkParams()){
            // update progaddr 
            successful = setProgaddr();
         }else if(strcmp(command,"bp")==0 && checkParams()){
-            // insert break points
+           successful = handleBreakpoint();  
         }else if(strcmp(command,"run")==0 && checkParams()){
             // run program
         }
