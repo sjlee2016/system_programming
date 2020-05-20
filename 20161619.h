@@ -114,7 +114,8 @@ char lstName [200]; // store file name for immediate file
 // PROJECT 3 
 long PROGADDR = 0;   //Program Load Address. Starting address in memory where the linked program is to be loaded.
 long CSADDR = 0; // Control Section Address.Starting address assigned to the control section currently being scanner by the loader  
-long CSLTH = 0; // Length of Control Section 
+long CSLTH = 0; // Length of Control Section
+long EXECADDR = 0; // Execution control section address 
 int numOfFile;
 int currentFileNum; 
 FILE * objf[3];  

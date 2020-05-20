@@ -1286,11 +1286,21 @@ int handleBreakpoint(){
         return SUCCESS;
     }
 }
-void resetESTAB(){
+void resetESTAB(){ // initialize estab 
     for(int i = 0 ; i < 3; i++)
         ESTAB[i] = NULL;
 }
-int insertESTAB(char symbol[], long address, long length){
+ESTAB_Table * findESTAB(char * symbol){
+    for(int i = 0; i < numOfFile; i++){
+        for(ESTAB_Table * temp=ESTAB[i]; temp!=NULL; temp=temp->next){
+            if(strcmp(temp->symbol,symbol)==0){
+               return temp;
+            }
+        }
+    }
+    return NULL; 
+}
+int insertESTAB(char * symbol, long address, long length){
     ESTAB_Table * newElem = (ESTAB_Table *) malloc(sizeof(ESTAB_Table)); 
     newElem->address = address;
     newElem->length = length;
@@ -1335,44 +1345,172 @@ int insertESTAB(char symbol[], long address, long length){
 int LoaderPassOne(){
     char line[1000];
     char addr[100];
-    char symbol[100]; 
+    char symbol[8]; 
     char * err; 
-    CSADDR = PROGADDR; 
+    CSADDR = PROGADDR; // set csaddr to progaddr for first control section
     long len = 0;
     long address;
     for(int i = 0 ; i < numOfFile; i++){
         currentFileNum = i; 
-     while(fgets(line,sizeof(line),objf[i])!=NULL){
-        if(line[0]=='H'){ // HEADER
+     while(fgets(line,sizeof(line),objf[i])!=NULL){ // while end of input 
+        if(line[0]=='H'){ // HEADER record 
             memset(symbol,0,sizeof(symbol)); 
             strncpy(symbol,line+1,6);
-            CSLTH= strtol(line+13,&err,16);
+            CSLTH= strtol(line+13,&err,16); // set cslth to control section length 
             len += CSLTH;
-            insertESTAB(symbol,CSADDR,CSLTH); 
+            if(!insertESTAB(symbol,CSADDR,CSLTH)){ // enter control section name into ESTAB with value CSADDR
+                printf("Control section named %s already exists\n",symbol);
+                return ERROR;
+            }
         }
         else if(line[0]=='D'){ // EXTERNAL DEFINITION
-              for(int k = 0; k < strlen(line)/2; k += 12) { // read 12 bytes
+              for(int j = 0; j < strlen(line)/2; j += 12) { // read each symbol 
                     memset(symbol,0,sizeof(symbol)); 
-                    strncpy(symbol,line+1+k,6);
-                    for(int j=0; j<6; j++) {
-                        if(isEmpty(symbol[j]))
-                            symbol[j] = '\0';
+                    strncpy(symbol,line+1+j,6);
+                    for(int k=0; k<6; k++) {
+                        if(symbol[k]==' ' || symbol[k]=='\n')
+                            symbol[k] = '\0';
                     }
-                    strncpy(addr,line+7+k,6);
+                    strncpy(addr,line+7+j,6); //  indicated address
                     addr[6] = '\0';
                     address = strtol(addr,&err,16);
-                    if(!insertESTAB(symbol, CSADDR+address,0)) {
-                        printf("ESTAB에 Symbol이 이미 존재합니다.\n");
+                    if(!insertESTAB(symbol, CSADDR+address,0)) { // insert symbol into ESTAB with value(CSADDR + indicated address)
+                        printf("Symbol already exists in the ESTAB.\n");
                         return ERROR;
                     }
                     
                 }
-        }else if(line[0]=='E'){
-            CSADDR += CSLTH; 
+        }else if(line[0]=='E'){ // END Record
+            CSADDR += CSLTH;  // update starting address for next control section 
             break;
         }
     }
     }
+    return SUCCESS;
+}
+int LoaderPassTwo(){
+    char line[1000];
+    char addr[100];
+    char symbol[100];
+    char objectCode[100];
+    char length[10]; 
+    char onebyte[3]; 
+    char * err; 
+    CSADDR = PROGADDR;
+    EXECADDR = PROGADDR; // set CSADDR and EXECADDR to PROGADDR 
+    long len = 0;
+    long address;
+    long value; 
+    char ref[1000][10];
+    for(int i = 0 ; i < numOfFile; i++){
+        currentFileNum = i;
+        memset(ref,0,sizeof(ref)); 
+        strcpy(ref[1], ESTAB[currentFileNum]->symbol); 
+     while(fgets(line,sizeof(line),objf[i])!=NULL){ // while end of input 
+        if(line[0]=='H'){ // HEADER record 
+            CSLTH= strtol(line+13,&err,16); // set cslth to control section length 
+            len += CSLTH;
+        }
+        else if(line[0]=='T'){ // Text Record
+            memset(addr,0,sizeof(addr));
+            memset(length,0,sizeof(length));
+            strncpy(addr,line+1,6);
+            strncpy(length,line+7,2);
+            address = strtol(addr,&err,16); 
+            address += CSADDR; // move object code from record to location
+            len = strtol(length,&err,16); 
+            for(int j = 0; j < len; j++){
+                memset(onebyte,0,sizeof(onebyte));
+                strncpy(onebyte,line+9+j*2,2); 
+                onebyte[2]='\0'; 
+                value = strtol(onebyte,&err,16); 
+                VMemory[address++] = value; 
+            }
+        }else if(line[0]=='R'){ // External Reference
+            for(int j = 0;  j < strlen(line); j+=8){
+                memset(onebyte, 0, sizeof(onebyte));
+                memset(symbol,0,sizeof(symbol));
+                strncpy(onebyte, line+1+j,2);
+                strncpy(symbol, line+1+j+2,6); 
+                onebyte[2]='\0';
+                value = strtol(onebyte,&err,16);
+                for(int i = 0 ; i < strlen(symbol); i++){
+                    if(symbol[i]==' ' || symbol[i] == '\n')
+                        symbol[i] = '\0';
+                }
+                if(ref[value][0]!='\0'){
+                    printf("Reference number %lX is assigned for multiple times.\n",value);
+                    return ERROR;
+                }
+                strcpy(ref[value],symbol);
+            }
+        }else if(line[0]=='M'){ // Modificcation Record
+            memset(onebyte,0,sizeof(onebyte));
+            memset(addr,0,sizeof(addr));
+            memset(symbol,0,sizeof(symbol));
+            memset(objectCode, 0, sizeof(objectCode));
+            strncpy(onebyte,line+10,2);
+            strncpy(addr,line+1,6);
+            address = strtol(addr,&err,16); 
+            address += CSADDR; // move object code from record to location
+            value = strtol(onebyte,&err,16); // read ref number
+            strcpy(symbol,ref[value]);  // find external reference symbol 
+            ESTAB_Table * refElem = findESTAB(symbol); 
+            if(refElem==NULL){
+                printf("External symbol is not defined in ESTAB table\n");
+                return ERROR;
+            }
+            for(int j = 0; j < 3; j++){
+                sprintf(onebyte,"%02X", VMemory[address+j]);
+                strcat(objectCode,onebyte);
+            }
+
+            long objectValue = strtol(objectCode,&err,16);
+            if(('A' <= objectCode[0] && objectCode[0] <= 'F') || ('8'<= objectCode[0] && '9' >= objectCode[0])){
+                    objectValue = 0xFFFFFF - objectValue + 1;
+                    objectValue = -objectValue;
+            }
+            if(line[9]=='+'){
+                objectValue += refElem->address;
+            }else if(line[9]=='-'){
+                objectValue -= refElem->address; 
+            }
+            if(objectValue < 0) {
+                    objectValue -= 0xFFFFFFFFFF000000;
+            }
+            memset(objectCode,0,sizeof(objectCode));
+            sprintf(objectCode,"%06lX",objectValue);
+            for(int j = 0; j < 6; j+=2){
+                memset(onebyte,0,sizeof(onebyte));
+                strncpy(onebyte,objectCode+j,2); 
+                onebyte[2]='\0'; 
+                value = strtol(onebyte,&err,16); 
+                VMemory[address++] = value; 
+             }
+        }
+        else if(line[0]=='E'){ // END Record
+            if(line[1] != '\n') {
+                memset(addr,0,sizeof(addr));
+                strncpy(addr,line+1,6);
+                EXECADDR = strtol(addr,&err,16);
+            }
+            CSADDR += CSLTH;  // update starting address for next control section 
+            break;
+        }
+    }
+    }
+    return SUCCESS;
+}
+int loader(){
+    resetESTAB();
+    if(!LoaderPassOne())
+        return ERROR;
+    for(int i = 0 ; i < numOfFile;i++)
+        rewind(objf[i]); 
+    if(!LoaderPassTwo())
+        return ERROR;
+
+    // PRINT ESTAB INFO 
     printf("control symbol address length\n");
     printf("section name\n");
     printf("--------------------------------\n");
@@ -1386,12 +1524,7 @@ int LoaderPassOne(){
         }
     }
     printf("--------------------------------\n");
-    printf("\ttotal length %04lX\n", len); 
-    return SUCCESS;
-}
-int loader(){
-    resetESTAB();
-    LoaderPassOne(); 
+    printf("\ttotal length %04lX\n", CSADDR-PROGADDR); 
     return SUCCESS; 
 }
 int checkObjectfile(){
