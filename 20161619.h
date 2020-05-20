@@ -28,7 +28,6 @@ typedef struct Table_Element{ // node for storing mnemonic information
     struct Table_Element* next;
 }Table_Element;
 
-
 typedef struct Symbol_Element{ // node used for symbol table
     char identifier[7];
     char type[10]; 
@@ -49,7 +48,13 @@ typedef struct Relocation_Element{ // node used to store address of relocation
     struct Relocation_Element* next;
 }Relocation_Element;
 
-
+typedef struct ESTAB_Table{
+    long address;
+    long length;
+    char symbol[100]; 
+    struct ESTAB_Table * next; 
+}ESTAB_Table; 
+ESTAB_Table * ESTAB[3];
 h_node head;  // points to the head of linked list of history node
 h_node current; // points to the current node of history node 
 Table_Element * HashTable [MAX_HASH_SIZE]; // hash table used to store opcode info 
@@ -105,11 +110,16 @@ char TEMP_BUFFER [1000] = {0};  // used to temporary store object code
 FILE *objFile;
 char objName [200]; // store file name for object file
 char lstName [200]; // store file name for immediate file 
-long PROGADDR = 0;   //porgaddr 실행시 주소가 저장된다.
-long CSADDR = 0; //ESTAB구성 시 각 섹션별 시작주소가 갱신된다.
-long CSLTH = 0; //Header record에서 프로그램의 길이를 저장한다.
+
+// PROJECT 3 
+long PROGADDR = 0;   //Program Load Address. Starting address in memory where the linked program is to be loaded.
+long CSADDR = 0; // Control Section Address.Starting address assigned to the control section currently being scanner by the loader  
+long CSLTH = 0; // Length of Control Section 
 int numOfFile;
+int currentFileNum; 
 FILE * objf[3];  
+char breakpoints[1000][8]; 
+int bpNum = 0; 
 //// USER-DEFINED FUNCTIONS 
 
 /******************************************************

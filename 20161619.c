@@ -1022,13 +1022,13 @@ void printObjectFile(){ // print T node to object file and initialize the linked
 int setProgaddr(){
     char * err;
   if (numOfParams == 1) { // if two parameter values are given
-
-        long PROGADDR = strtol(params[0], &err, 16); // convert each parameter to long type
-        if (PROGADDR < 0 || PROGADDR > MAX_MEMORY_SIZE-1){ // print error message if address is out of bound 
+        long temp = strtol(params[0], &err, 16); // convert each parameter to long type
+        if (temp < 0 || temp > MAX_MEMORY_SIZE-1){ // print error message if address is out of bound 
             printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
             PROGADDR = 0;
             return ERROR;
         }
+        PROGADDR = temp;
         return SUCCESS; 
     }else{
         printErrorMessage(ERROR_PARAMETER); // if wrong number of parameter is given 
@@ -1245,9 +1245,153 @@ int assemble(char * fileName){ // assemble assembly file
 PROJECT 3
 */
 int handleBreakpoint(){
-    return 1; 
+    char p[100];
+    int idx = 0;
+    int check = 0;
+    memset(p,0,sizeof(p));
+    for(int i = instLength+1; i < MAX_USER_INPUT; i++){
+        if(!isEmpty(userInput[i])){
+            p[idx++]=userInput[i];
+        }    
+        if(isEmpty(userInput[i]) && idx!=0){
+            break; 
+        }
+    }
+    if(idx==0){
+        // print break points;
+        printf("\t\tbreakpoint\n");
+        printf("\t\t--------\n");
+        for(int i = 0; i < bpNum; i++){
+            printf("\t\t%s\n", breakpoints[i]);           
+        }
+        return SUCCESS;
+    }else if(strcmp("clear",p)==0){
+        bpNum = 0; 
+        printf("successfully cleared breakpoints..\n");
+        return SUCCESS;
+    }else{
+        for(int i = 0 ; i < strlen(p); i++){
+            if(!isHexadecimal(p[i])){
+                printf("Address should be given in hexadecimal format.\n");
+                return SUCCESS;
+            }
+        }
+        long hexValue =  strtol(p, NULL, 16); // convert each parameter to long type
+        if(hexValue > MAX_MEMORY_SIZE){ // SHOULD NOT EXCEED MAX LENGTH 
+            printf("breakpoints cannot exceed max memory size..\n");
+            return ERROR;
+        }
+        strcpy(breakpoints[bpNum++],p); 
+        printf("\t\t[ok] create breakpoint %s\n", p); 
+        return SUCCESS;
+    }
+}
+void resetESTAB(){
+    for(int i = 0 ; i < 3; i++)
+        ESTAB[i] = NULL;
+}
+int insertESTAB(char symbol[], long address, long length){
+    ESTAB_Table * newElem = (ESTAB_Table *) malloc(sizeof(ESTAB_Table)); 
+    newElem->address = address;
+    newElem->length = length;
+    memset(newElem->symbol,0,sizeof(newElem->symbol));
+    strcpy(newElem->symbol,symbol);
+    newElem->next=NULL;
+    ESTAB_Table * temp;
+    if(ESTAB[currentFileNum]==NULL){
+          for(int i = 0 ; i < 3; i++){
+            if(i==currentFileNum){
+                continue;
+            }
+            for(temp = ESTAB[i]; temp!=NULL; temp=temp->next){
+            if(strcmp(temp->symbol,symbol)==0){
+                printf("Duplicate External symbol %s\n", symbol);
+                return ERROR;
+            }
+            } 
+          }
+        ESTAB[currentFileNum]=newElem;
+    }else{
+        for(temp = ESTAB[currentFileNum]; temp->next!=NULL; temp=temp->next){
+            if(strcmp(temp->symbol,symbol)==0){
+                printf("Duplicate External symbol\n");
+                return ERROR;
+            }
+        }
+        temp->next = newElem; 
+        for(int i = 0 ; i < 3; i++){
+            if(i!=currentFileNum){
+            for(temp = ESTAB[i]; temp!=NULL; temp=temp->next){
+            if(strcmp(temp->symbol,symbol)==0){
+                printf("Duplicate External symbol\n");
+                return ERROR;
+            }
+            }
+        } 
+        }
+    }
+    return SUCCESS;
+}
+int LoaderPassOne(){
+    char line[1000];
+    char addr[100];
+    char symbol[100]; 
+    char * err; 
+    CSADDR = PROGADDR; 
+    long len = 0;
+    long address;
+    for(int i = 0 ; i < numOfFile; i++){
+        currentFileNum = i; 
+     while(fgets(line,sizeof(line),objf[i])!=NULL){
+        if(line[0]=='H'){ // HEADER
+            memset(symbol,0,sizeof(symbol)); 
+            strncpy(symbol,line+1,6);
+            CSLTH= strtol(line+13,&err,16);
+            len += CSLTH;
+            insertESTAB(symbol,CSADDR,CSLTH); 
+        }
+        else if(line[0]=='D'){ // EXTERNAL DEFINITION
+              for(int k = 0; k < strlen(line)/2; k += 12) { // read 12 bytes
+                    memset(symbol,0,sizeof(symbol)); 
+                    strncpy(symbol,line+1+k,6);
+                    for(int j=0; j<6; j++) {
+                        if(isEmpty(symbol[j]))
+                            symbol[j] = '\0';
+                    }
+                    strncpy(addr,line+7+k,6);
+                    addr[6] = '\0';
+                    address = strtol(addr,&err,16);
+                    if(!insertESTAB(symbol, CSADDR+address,0)) {
+                        printf("ESTAB에 Symbol이 이미 존재합니다.\n");
+                        return ERROR;
+                    }
+                    
+                }
+        }else if(line[0]=='E'){
+            CSADDR += CSLTH; 
+            break;
+        }
+    }
+    }
+    printf("control symbol address length\n");
+    printf("section name\n");
+    printf("--------------------------------\n");
+    for(int i = 0; i < numOfFile; i++){
+        for(ESTAB_Table * temp = ESTAB[i]; temp!=NULL; temp= temp->next){
+            if(temp==ESTAB[i]){
+                printf("%s\t\t%lX\t%04lX\n", temp->symbol, temp->address, temp->length);
+            }else{
+                printf("\t%s\t%lX\n",temp->symbol,temp->address);
+            }
+        }
+    }
+    printf("--------------------------------\n");
+    printf("\ttotal length %04lX\n", len); 
+    return SUCCESS;
 }
 int loader(){
+    resetESTAB();
+    LoaderPassOne(); 
     return SUCCESS; 
 }
 int checkObjectfile(){
@@ -1377,7 +1521,7 @@ int getCommand(){
        }else if(strcmp(command,"progaddr")==0 && checkParams()){
            // update progaddr 
            successful = setProgaddr();
-        }else if(strcmp(command,"bp")==0 && checkParams()){
+        }else if(strcmp(command,"bp")==0){
            successful = handleBreakpoint();  
         }else if(strcmp(command,"run")==0 && checkParams()){
             // run program
