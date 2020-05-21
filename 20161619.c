@@ -1,5 +1,8 @@
 #include "20161619.h"
-
+/*
+Project 1
+Shell
+*/
 void updateHistory(char *command){
     h_node temp = (History_Node *)malloc(sizeof(History_Node) * 1); // allocate history node
     temp->n = historyCount; // store current number of history stored into n 
@@ -433,6 +436,10 @@ int fillMemory(){
     }
     
 }
+/*
+Project 2
+Assembler 
+*/
 void showOpcode(){ // print out all opcodes from hash table
      Table_Element *elem;
      int i = 0; 
@@ -1019,22 +1026,7 @@ void printObjectFile(){ // print T node to object file and initialize the linked
     T_last = NULL;
     fprintf(objFile,"\n"); // print new line 
 }
-int setProgaddr(){
-    char * err;
-  if (numOfParams == 1) { // if two parameter values are given
-        long temp = strtol(params[0], &err, 16); // convert each parameter to long type
-        if (temp < 0 || temp > MAX_MEMORY_SIZE-1){ // print error message if address is out of bound 
-            printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
-            PROGADDR = 0;
-            return ERROR;
-        }
-        PROGADDR = temp;
-        return SUCCESS; 
-    }else{
-        printErrorMessage(ERROR_PARAMETER); // if wrong number of parameter is given 
-        return ERROR;
-    }
-}
+
 int passTwo(char * asmFileName){ // read each line in assembly file and generates .lst and .obj file
     memset(lstName,0,sizeof(lstName)); // initalize array
     memset(objName,0,sizeof(objName));
@@ -1242,8 +1234,24 @@ int assemble(char * fileName){ // assemble assembly file
     return SUCCESS; 
 }
 /*
-PROJECT 3
+PROJECT 3 Link and Loader 
 */
+int setProgaddr(){
+    char * err;
+  if (numOfParams == 1) { // if two parameter values are given
+        long temp = strtol(params[0], &err, 16); // convert each parameter to long type
+        if (temp < 0 || temp > MAX_MEMORY_SIZE-1){ // print error message if address is out of bound 
+            printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
+            PROGADDR = 0;
+            return ERROR;
+        }
+        PROGADDR = temp;
+        return SUCCESS; 
+    }else{
+        printErrorMessage(ERROR_PARAMETER); // if wrong number of parameter is given 
+        return ERROR;
+    }
+}
 int handleBreakpoint(){
     char p[100];
     int idx = 0;
@@ -1353,8 +1361,9 @@ int LoaderPassOne(){
     for(int i = 0 ; i < numOfFile; i++){
         currentFileNum = i; 
      while(fgets(line,sizeof(line),objf[i])!=NULL){ // while end of input 
+        memset(symbol,0,sizeof(symbol)); 
+        memset(addr,0,sizeof(address));
         if(line[0]=='H'){ // HEADER record 
-            memset(symbol,0,sizeof(symbol)); 
             strncpy(symbol,line+1,6);
             CSLTH= strtol(line+13,&err,16); // set cslth to control section length 
             len += CSLTH;
@@ -1365,20 +1374,17 @@ int LoaderPassOne(){
         }
         else if(line[0]=='D'){ // EXTERNAL DEFINITION
               for(int j = 0; j < strlen(line)/2; j += 12) { // read each symbol 
-                    memset(symbol,0,sizeof(symbol)); 
                     strncpy(symbol,line+1+j,6);
+                    strncpy(addr,line+7+j,6); //  indicated address
                     for(int k=0; k<6; k++) {
-                        if(symbol[k]==' ' || symbol[k]=='\n')
+                        if(isEmpty(symbol[k]))
                             symbol[k] = '\0';
                     }
-                    strncpy(addr,line+7+j,6); //  indicated address
-                    addr[6] = '\0';
                     address = strtol(addr,&err,16);
                     if(!insertESTAB(symbol, CSADDR+address,0)) { // insert symbol into ESTAB with value(CSADDR + indicated address)
                         printf("Symbol already exists in the ESTAB.\n");
                         return ERROR;
                     }
-                    
                 }
         }else if(line[0]=='E'){ // END Record
             CSADDR += CSLTH;  // update starting address for next control section 
@@ -1407,53 +1413,50 @@ int LoaderPassTwo(){
         memset(ref,0,sizeof(ref)); 
         strcpy(ref[1], ESTAB[currentFileNum]->symbol); 
      while(fgets(line,sizeof(line),objf[i])!=NULL){ // while end of input 
+        memset(onebyte,0,sizeof(onebyte));
+        memset(addr,0,sizeof(addr));
+        memset(symbol,0,sizeof(symbol));
+        memset(objectCode, 0, sizeof(objectCode));    
         if(line[0]=='H'){ // HEADER record 
             CSLTH= strtol(line+13,&err,16); // set cslth to control section length 
             len += CSLTH;
         }
         else if(line[0]=='T'){ // Text Record
-            memset(addr,0,sizeof(addr));
-            memset(length,0,sizeof(length));
             strncpy(addr,line+1,6);
             strncpy(length,line+7,2);
             address = strtol(addr,&err,16); 
             address += CSADDR; // move object code from record to location
             len = strtol(length,&err,16); 
             for(int j = 0; j < len; j++){
-                memset(onebyte,0,sizeof(onebyte));
                 strncpy(onebyte,line+9+j*2,2); 
                 onebyte[2]='\0'; 
                 value = strtol(onebyte,&err,16); 
                 VMemory[address++] = value; 
             }
         }else if(line[0]=='R'){ // External Reference
-            for(int j = 0;  j < strlen(line); j+=8){
-                memset(onebyte, 0, sizeof(onebyte));
-                memset(symbol,0,sizeof(symbol));
-                strncpy(onebyte, line+1+j,2);
-                strncpy(symbol, line+1+j+2,6); 
-                onebyte[2]='\0';
-                value = strtol(onebyte,&err,16);
-                for(int i = 0 ; i < strlen(symbol); i++){
-                    if(symbol[i]==' ' || symbol[i] == '\n')
-                        symbol[i] = '\0';
+            for(int rn = 2;  rn < (strlen(line)-1)/8+3; rn++){
+                strncpy(symbol, line+(rn-2)*8+3,6); 
+                for(int k = 0 ; k < strlen(symbol); k++){
+                    if(symbol[k]==' ' || symbol[k] == '\n')
+                        symbol[k] = '\0';
                 }
-                if(ref[value][0]!='\0'){
+                if(ref[rn][0]!='\0'){
                     printf("Reference number %lX is assigned for multiple times.\n",value);
                     return ERROR;
                 }
-                strcpy(ref[value],symbol);
+                strcpy(ref[rn],symbol);
             }
         }else if(line[0]=='M'){ // Modificcation Record
-            memset(onebyte,0,sizeof(onebyte));
-            memset(addr,0,sizeof(addr));
-            memset(symbol,0,sizeof(symbol));
-            memset(objectCode, 0, sizeof(objectCode));
-            strncpy(onebyte,line+10,2);
             strncpy(addr,line+1,6);
             address = strtol(addr,&err,16); 
             address += CSADDR; // move object code from record to location
-            value = strtol(onebyte,&err,16); // read ref number
+           
+            strncpy(onebyte,line+10,2); // get reference number 
+            value = strtol(onebyte,&err,16);
+            if(value==0){
+                printf("Reference number is out of range..\n");
+                return ERROR;
+            }
             strcpy(symbol,ref[value]);  // find external reference symbol 
             ESTAB_Table * refElem = findESTAB(symbol); 
             if(refElem==NULL){
@@ -1470,18 +1473,12 @@ int LoaderPassTwo(){
                     objectValue = 0xFFFFFF - objectValue + 1;
                     objectValue = -objectValue;
             }
-            if(line[9]=='+'){
-                objectValue += refElem->address;
-            }else if(line[9]=='-'){
-                objectValue -= refElem->address; 
-            }
+            objectValue += (line[9] == '-' ? -1 : 1) * refElem->address; 
             if(objectValue < 0) {
                     objectValue -= 0xFFFFFFFFFF000000;
             }
-            memset(objectCode,0,sizeof(objectCode));
             sprintf(objectCode,"%06lX",objectValue);
             for(int j = 0; j < 6; j+=2){
-                memset(onebyte,0,sizeof(onebyte));
                 strncpy(onebyte,objectCode+j,2); 
                 onebyte[2]='\0'; 
                 value = strtol(onebyte,&err,16); 
@@ -1489,10 +1486,10 @@ int LoaderPassTwo(){
              }
         }
         else if(line[0]=='E'){ // END Record
-            if(line[1] != '\n') {
-                memset(addr,0,sizeof(addr));
+            if(!isEmpty(line[1])) {
                 strncpy(addr,line+1,6);
-                EXECADDR = strtol(addr,&err,16);
+                EXECADDR = CSADDR; 
+                EXECADDR += strtol(addr,&err,16);
             }
             CSADDR += CSLTH;  // update starting address for next control section 
             break;
@@ -1510,6 +1507,7 @@ int loader(){
     if(!LoaderPassTwo())
         return ERROR;
 
+    REG[L] = CSADDR; // update L register
     // PRINT ESTAB INFO 
     printf("control symbol address length\n");
     printf("section name\n");
@@ -1528,6 +1526,7 @@ int loader(){
     return SUCCESS; 
 }
 int checkObjectfile(){
+
    char input[10] = "";
    int last = 0;
    int idx1,idx2,idx3,i;
@@ -1604,6 +1603,30 @@ int checkObjectfile(){
    }
    return SUCCESS;
 }
+
+int fetchMemory(int address, int hBytes) {
+    int value = 0;
+    if(hBytes%2){
+        value = VMemory[address] % 0x10;
+    }else{
+        value = VMemory[address] % 0x100;
+    }
+    for(int i = 1; i <= (hBytes - 1) / 2; i++) {
+        value *= 0x100; // increase byte
+        value += VMemory[address + i];
+    }
+    return value;
+}
+
+void storeMemory(int address, int bytes, int value) {
+    for(int i = address + bytes - 1; i >= address && address < MAX_MEMORY_SIZE ; i--) {
+        VMemory[i] = value & 0xFF; // mask over lower byte
+        value /= 0x100;
+    }
+}
+int run(){
+    return SUCCESS; 
+}
 int getCommand(){
     int i; 
     int successful = 0; 
@@ -1649,15 +1672,13 @@ int getCommand(){
         }else if(strcmp(command,"assemble")==0 && checkFilename()){ // assemble 
             successful = assemble(fullFileName); 
         }else if(strcmp(command,"loader")==0 && checkObjectfile()){ // loader
-            // load and link
             successful = loader(); 
        }else if(strcmp(command,"progaddr")==0 && checkParams()){
-           // update progaddr 
-           successful = setProgaddr();
+            successful = setProgaddr();
         }else if(strcmp(command,"bp")==0){
-           successful = handleBreakpoint();  
-        }else if(strcmp(command,"run")==0 && checkParams()){
-            // run program
+            successful = handleBreakpoint();  
+        }else if(strcmp(command,"run")==0 && checkObjectfile()){
+            successful = run();
         }
     }
     if(successful){ // insert to history list only if command was successful 
