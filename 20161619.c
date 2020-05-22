@@ -58,7 +58,7 @@ void printAllCommands(){ // print out all the commands
 
 int isSimpleInst(){
     int i,j,flag,found = 0;
-    for (i = 0; i < 11; i++) { // loop through simple instruction list to find out it matches the user input 
+    for (i = 0; i < 12; i++) { // loop through simple instruction list to find out it matches the user input 
         flag = 0; // initialize flag value
         instLength = strlen(simpleInsts[i]); // get the length of the instruction 
         if (strncmp(userInput, simpleInsts[i], instLength) == 0){ // if user input contains the following instruction
@@ -132,7 +132,7 @@ void printErrorMessage(int type){ // print out error message for specific type
 
 int isComplexInst(){
     instLength = 0;
-    for (int i = 0; i < 13 ; i++){ // loop through complex instruction list
+    for (int i = 0; i < 12 ; i++){ // loop through complex instruction list
         instLength = strlen(complexInsts[i]); // get length of the instruction 
         if (strncmp(userInput, complexInsts[i], instLength) == 0) { // if the user input includes following instruction
             if (isEmpty(userInput[instLength])) // check if the next character is empty
@@ -1289,6 +1289,10 @@ int handleBreakpoint(){
             printf("breakpoints cannot exceed max memory size..\n");
             return ERROR;
         }
+        if(bpNum>10000){
+            printf("breakpoints maximum limit reached..\n");
+            return ERROR;
+        }
         strcpy(breakpoints[bpNum++],p); 
         printf("\t\t[ok] create breakpoint %s\n", p); 
         return SUCCESS;
@@ -1646,9 +1650,13 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){
         case SUB : REG[A] = REG[A] - value; break;
         case SUBF : REG[F] = REG[F] - value; break;
         case SUBR : REG[R2] = REG[R2] - REG[R1];   break;
-        case DIV : REG[A] = REG[A] / value; break;
-        case DIVF : REG[F] = REG[F] / value; break;
-        case DIVR : REG[R2] = REG[R2] / REG[R1]; break;
+        case DIV :  if(value!=0)
+                        REG[A] = REG[A] / value; break;
+        case DIVF : if(value!=0) 
+                        REG[F] = REG[F] / value; break;
+        case DIVR : if(REG[R1]!=0)
+                        REG[R2] = REG[R2] / REG[R1]; 
+                     break;
         case MUL : REG[A] = REG[A] * value; break;
         case MULF : REG[F] = REG[F] * value; break;
         case MULR : REG[R2] = REG[R1] * REG[R2]; break;
@@ -1695,8 +1703,8 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){
                     REG[PC] = targetAddress; 
                     break;
         case CLEAR : REG[R1] = 0; break;
-        case FIX : REG[A] = (int)(REG[F]); break;
-        case FLOAT : REG[F] = (float)(REG[A]); break;
+        case FIX : REG[A] = REG[F]; break;
+        case FLOAT : REG[F] = REG[A]; break;
         case HIO : break;
         case NORM : break;
         case AND  : REG[A] = REG[A] & value; break;
@@ -1738,7 +1746,7 @@ int getFormat(long address){
 int breakpointExists(long address){
     long add;
     char * err;
-    for(int i = 0; i < 1000; i++) {
+    for(int i = 0; i < 10000; i++) {
         if(strtol(breakpoints[i],&err,16)==address){
             memset(breakpoints[i],0,sizeof(breakpoints[i]));
             return 1;
@@ -1798,6 +1806,7 @@ int run(){
             targetAddress += REG[X];
         }        
      }
+
     execute(opcode,targetAddress,addressMode,format); 
     address = REG[PC]; 
     if(breakpointExists(address)){
@@ -1846,6 +1855,8 @@ int getCommand(){
             showOpcode(); 
         }else if(strcmp(command,"symbol")==0){ // print symbol table 
             showSymbol();
+        }else if(strcmp(command,"run")==0){
+            run();
         }
     }
     else if (isComplexInst()){   // user command is one of the complex instructions 
@@ -1868,8 +1879,6 @@ int getCommand(){
             successful = setProgaddr();
         }else if(strcmp(command,"bp")==0){
             successful = handleBreakpoint();  
-        }else if(strcmp(command,"run")==0 && checkObjectfile()){
-            successful = run();
         }
     }
     if(successful){ // insert to history list only if command was successful 

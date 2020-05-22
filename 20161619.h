@@ -79,8 +79,8 @@ int numOfParams=0; // global variable to store number of parameters
 long defaultStartAddr = -1;   // default starting address for memory for dump command 
 int instLength = 0; // length of the instruction (excluding unnessary inputs from user like empty space and parameters)
 int historyCount = 0; // total number of history stored 
-char simpleInsts [11][20] = {"help", "h", "dir", "d", "history","hi","quit","q", "reset","symbol","opcodelist"}; // list of instructions that does not require any parameter
-char complexInsts[13][10] = {"dump","du","edit","e","fill","f","opcode","type","assemble","bp","loader","progaddr","run"}; // list of instructions that require extra parameter input 
+char simpleInsts [12][20] = {"help", "h", "dir", "d", "history","hi","quit","q", "reset","symbol","opcodelist","run"}; // list of instructions that does not require any parameter
+char complexInsts[12][10] = {"dump","du","edit","e","fill","f","opcode","type","assemble","bp","loader","progaddr"}; // list of instructions that require extra parameter input 
 char userInput[100]; // stores user input 
 char command[11]; // stores command from user input (excludes empty string)
 char targetMnemonic[7]; // stores mnemonic from user input 
@@ -119,7 +119,7 @@ long EXECADDR = 0; // Execution control section address
 int numOfFile; // num of files given in loader command
 int currentFileNum; // current file number being loaded
 FILE * objf[3];  
-char breakpoints[1000][8];  // store break points
+char breakpoints[10000][8];  // store break points
 int bpNum = 0; // number of break points
 long REG[9]; // store register values 
 int R1, R2 = 0; // register 1 and 2 for format 2 
