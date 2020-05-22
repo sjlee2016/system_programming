@@ -1656,51 +1656,48 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){
         case MULF : REG[F] = REG[F] * value; break;
         case MULR : REG[R2] = REG[R1] * REG[R2]; break;
          // LOAD AND STORE
-        case LDA : printf("LDA..%lX\n",value);
+        case LDA : 
                     REG[A] = value; break;
-        case LDB : printf("LDB..\n"); 
+        case LDB :  
                     REG[B] = value;  break;
         case LDCH : REG[A] = REG[A] & 0xFFFFFF00; // lower 3 bytes 
                     REG[A] = REG[A] + (value / 0x10000); break;
         case LDF : REG[F] = value; break;
         case LDL : REG[L] = value;  break;
         case LDS : REG[S] = value;  break;
-        case LDT : printf("LDT..\n"); REG[T] = value;  break;
+        case LDT : REG[T] = value;  break;
         case LDX : REG[X] = value;  break;
         case LPS : REG[S] = value;  break;
-        case STA : printf("STA..\n"); storeMemory(targetAddress,3,REG[A]); break;
+        case STA : storeMemory(targetAddress,3,REG[A]); break;
         case STB : storeMemory(targetAddress,3,REG[B]); break;
-        case STCH : printf("STCH..\n"); VMemory[targetAddress] = REG[A] & 0xFF; break; 
+        case STCH : VMemory[targetAddress] = REG[A] & 0xFF; break; 
         case STF : storeMemory(targetAddress,6,REG[F]); break;
         case STI : break;
-        case STL : printf("STL..\n"); 
-                   storeMemory(targetAddress,3,REG[L]); break;
+        case STL : storeMemory(targetAddress,3,REG[L]); break;
         case STS : storeMemory(targetAddress,3,REG[S]); break;
         case STSW : storeMemory(targetAddress,3,REG[SW]); break;
         case STT : storeMemory(targetAddress,3,REG[T]); break;
-        case STX : printf("STX..\n"); storeMemory(targetAddress,3,REG[X]); break;
+        case STX : storeMemory(targetAddress,3,REG[X]); break;
         // CONDITIONALS
-        case COMP : printf("COMP..\n"); COMPMnemonic(REG[A],value);  break;
+        case COMP : COMPMnemonic(REG[A],value);  break;
         case COMPF : COMPMnemonic(REG[F],value); break;
-        case COMPR : printf("COMPR..\n"); COMPMnemonic(REG[R1], REG[R2]); break; 
-        case J :    printf("J..\n");
-                    REG[PC] = targetAddress; break;
-        case JEQ : printf("JEQ..\n");
-                   if(CC=='=')
+        case COMPR :COMPMnemonic(REG[R1], REG[R2]); break; 
+        case J :   REG[PC] = targetAddress; break;
+        case JEQ : if(CC=='=')
                    REG[PC] = targetAddress; 
                    break; 
         case JGT : if(CC=='>')
                    REG[PC] = targetAddress; 
                    break;
-        case JLT : printf("JLT..\n");
+        case JLT : 
                    if(CC=='<')
                    REG[PC] = targetAddress; 
                    break;
-        case JSUB : printf("JSUB..\n");
+        case JSUB : 
                     REG[L] = REG[PC]; 
                     REG[PC] = targetAddress; 
                     break;
-        case CLEAR : printf("CLEAR %d\n", R1); REG[R1] = 0; break;
+        case CLEAR : REG[R1] = 0; break;
         case FIX : REG[A] = (int)(REG[F]); break;
         case FLOAT : REG[F] = (float)(REG[A]); break;
         case HIO : break;
@@ -1708,21 +1705,27 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){
         case AND  : REG[A] = REG[A] & value; break;
         case OR  : break;
         case RMO : break;
-        case RSUB : printf("RSUB..\n"); REG[PC] = REG[L]; break;
+        case RSUB : REG[PC] = REG[L]; break;
         case SHIFTL : break; 
         case SIO : break; 
         case SSK : break;
         case SVC : break;
-        case RD  : printf("RD..\n"); CC='<'; break;
-        case TD : printf("TD..\n"); CC = '<'; break;
+        case RD  :  CC='<'; break;
+        case TD :   CC = '<'; break;
         case TIO :  REG[X]++; CC = '<'; break;
         case TIX :  REG[X]++; CC='<'; break;
-        case TIXR :  REG[X]++; printf("TIXR..\n"); CC = '<'; break;
+        case TIXR :  REG[X]++; 
+                     CC = '=';
+                     if(REG[X] < REG[R1]){
+                         CC = '<';
+                     }else if(REG[X] > REG[R1]){
+                         CC = '>';
+                     }
+                     break;
         case WD :  break;
     }
     
 }
-
 
 int getFormat(long address){
     long a = VMemory[address]/0x10;
@@ -1756,7 +1759,6 @@ int run(){
      int addressMode = VMemory[address] - opcode;
      int format = getFormat(address);  
      REG[PC] += format; 
-     printf("%d)\n",++j);
      if(format==1){
        targetAddress = fetchMemory(address,5) & 0x7FFF;
      }else if(format==2){
@@ -1766,14 +1768,18 @@ int run(){
         long xbpe = VMemory[address+1]/0x10;
         targetAddress = fetchMemory(address + 1, format == 3 ?  3 : 5); 
         if(format == 3 ) {
+            if(targetAddress >= 0xF00){
+              targetAddress =  -(0xFFF-targetAddress+1);
+            }
             if(xbpe&0x2){ // PC Relative
             targetAddress += REG[PC];
         }else if(xbpe&0x4){ // Base Relative
             targetAddress += REG[B]; 
         }
         }
+        
         switch(addressMode){
-            case 0 :  targetAddress = fetchMemory(address,5) & 0x7FFF; printf("SIC..\n"); break; // SIC
+            case 0 :  targetAddress = fetchMemory(address,5) & 0x7FFF; break; // SIC
             case 1 :  break;
             case 2 :  targetAddress = fetchMemory(targetAddress,6); break;
             case 3 :  printf("Simple...\n"); break;  
@@ -1790,7 +1796,8 @@ int run(){
     printf("\t    B : %06lX S : %06lX\n", REG[B], REG[S]);
     printf("\t    T : %06lX\n", REG[T]);
     printf("---------------------------\n");
-   
+    if(j==44)
+        break;
     }
         return SUCCESS; 
 }
