@@ -1604,7 +1604,6 @@ int checkObjectfile(){
    return SUCCESS;
 }
 void COMPMnemonic(long a, long b){
-    printf("comparing!! %lX %lX\n",a,b);
      if(a < b){
         CC = '<';
     }else if(a > b){
@@ -1636,11 +1635,9 @@ void storeMemory(long address, int bytes, long value) {
 void execute(long opcode, long targetAddress, int addressMode, int format ){
     long value; 
     value = targetAddress; 
-    printf("address mode : %d\n", addressMode);
     if(addressMode==3){ // simple 
         value = fetchMemory(targetAddress,6);
     }
-    printf("opcode %lX %lX\n", opcode, value);
     switch(opcode){
         // ARITHMETICS 
         case ADD :  REG[A] = REG[A] + value; break;
@@ -1737,6 +1734,18 @@ int getFormat(long address){
         return 4; 
     return 3;
 }
+
+int breakpointExists(long address){
+    long add;
+    char * err;
+    for(int i = 0; i < 1000; i++) {
+        if(strtol(breakpoints[i],&err,16)==address){
+            memset(breakpoints[i],0,sizeof(breakpoints[i]));
+            return 1;
+        }
+    }
+    return 0; 
+}
 int run(){
     long address = PROGADDR;
     long targetAddress = 0; 
@@ -1754,7 +1763,7 @@ int run(){
             endADDR += ESTAB[i]->length;
     }
     REG[L] = PROGADDR + endADDR;
-    while(address <= PROGADDR + endADDR){
+    while(address < PROGADDR + endADDR){
      long opcode = VMemory[address] & 0xFC;
      int addressMode = VMemory[address] - opcode;
      int format = getFormat(address);  
@@ -1782,7 +1791,7 @@ int run(){
             case 0 :  targetAddress = fetchMemory(address,5) & 0x7FFF; break; // SIC
             case 1 :  break;
             case 2 :  targetAddress = fetchMemory(targetAddress,6); break;
-            case 3 :  printf("Simple...\n"); break;  
+            case 3 :  break;  
         }
 
         if(xbpe&0x8){ // Indexed 
@@ -1791,15 +1800,23 @@ int run(){
      }
     execute(opcode,targetAddress,addressMode,format); 
     address = REG[PC]; 
-    printf("\t    A : %06lX X : %06lX\n", REG[A], REG[X]);
-    printf("\t    L : %06lX PC: %06lX\n", REG[L], REG[PC]);
-    printf("\t    B : %06lX S : %06lX\n", REG[B], REG[S]);
-    printf("\t    T : %06lX\n", REG[T]);
-    printf("---------------------------\n");
-    if(j==44)
-        break;
+    if(breakpointExists(address)){
+        printf("\tA : %06lX X : %06lX\n", REG[A], REG[X]);
+        printf("\tL : %06lX PC: %06lX\n", REG[L], REG[PC]);
+        printf("\tB : %06lX S : %06lX\n", REG[B], REG[S]);
+        printf("\tT : %06lX\n", REG[T]);
+        printf("\tStop at checkpoint[%lX]\n", address);
+        return SUCCESS;
     }
-        return SUCCESS; 
+    
+}
+        printf("\tA : %06lX X : %06lX\n", REG[A], REG[X]);
+        printf("\tL : %06lX PC: %06lX\n", REG[L], REG[PC]);
+        printf("\tB : %06lX S : %06lX\n", REG[B], REG[S]);
+        printf("\tT : %06lX\n", REG[T]);
+        printf("\t\tEnd Program\n");
+ 
+return SUCCESS; 
 }
 int getCommand(){
     int i; 
