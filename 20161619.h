@@ -122,7 +122,8 @@ FILE * objf[3];
 char breakpoints[1000][8];  // store break points
 int bpNum = 0; // number of break points
 long REG[9]; // store register values 
-
+int R1, R2 = 0; // register 1 and 2 for format 2 
+char CC; 
 typedef enum{
     A = 0,
     X = 1,

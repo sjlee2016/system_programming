@@ -1603,6 +1603,15 @@ int checkObjectfile(){
    }
    return SUCCESS;
 }
+void COMPMnemonic(long a, long b){
+    printf("comparing!! %lX %lX\n",a,b);
+     if(a < b){
+        CC = '<';
+    }else if(a > b){
+        CC = '>';
+    }else 
+        CC = '='; 
+}
 
 int fetchMemory(int address, int hBytes) {
     int value = 0;
@@ -1618,14 +1627,168 @@ int fetchMemory(int address, int hBytes) {
     return value;
 }
 
-void storeMemory(int address, int bytes, int value) {
+void storeMemory(long address, int bytes, long value) {
     for(int i = address + bytes - 1; i >= address && address < MAX_MEMORY_SIZE ; i--) {
         VMemory[i] = value & 0xFF; // mask over lower byte
         value /= 0x100;
     }
 }
+void execute(long opcode, long targetAddress){
+    long value; 
+    value = targetAddress; 
+    printf("opcode %lX %lX\n", opcode, targetAddress);
+    switch(opcode){
+        // ARITHMETICS 
+        case ADD :  REG[A] = REG[A] + value; break;
+        case ADDF : REG[F] = REG[F] + value; break; 
+        case ADDR : REG[R2] = REG[R2] + REG[R1];   break;
+        case SUB : REG[A] = REG[A] - value; break;
+        case SUBF : REG[F] = REG[F] - value; break;
+        case SUBR : REG[R2] = REG[R2] - REG[R1];   break;
+        case DIV : REG[A] = REG[A] / value; break;
+        case DIVF : REG[F] = REG[F] / value; break;
+        case DIVR : REG[R2] = REG[R2] / REG[R1]; break;
+        case MUL : REG[A] = REG[A] * value; break;
+        case MULF : REG[F] = REG[F] * value; break;
+        case MULR : REG[R2] = REG[R1] * REG[R2]; break;
+         // LOAD AND STORE
+        case LDA : printf("LDA..\n");
+                    REG[A] = value; break;
+        case LDB : printf("LDB..\n"); 
+                    REG[B] = value;  break;
+        case LDCH : REG[A] = REG[A] & 0xFFFFFF00; // lower 3 bytes 
+                    REG[A] = REG[A] + (value / 0x10000); break;
+        case LDF : REG[F] = value; break;
+        case LDL : REG[L] = value;  break;
+        case LDS : REG[S] = value;  break;
+        case LDT : printf("LDT..\n"); REG[T] = value;  break;
+        case LDX : REG[X] = value;  break;
+        case LPS : REG[S] = value;  break;
+        case STA : printf("STA..\n"); storeMemory(targetAddress,3,REG[A]); break;
+        case STB : storeMemory(targetAddress,3,REG[B]); break;
+        case STCH : printf("STCH..\n"); VMemory[targetAddress] = REG[A] & 0xFF; break; 
+        case STF : storeMemory(targetAddress,6,REG[F]); break;
+        case STI : break;
+        case STL : printf("STL..\n"); 
+                   storeMemory(targetAddress,3,REG[L]); break;
+        case STS : storeMemory(targetAddress,3,REG[S]); break;
+        case STSW : storeMemory(targetAddress,3,REG[SW]); break;
+        case STT : storeMemory(targetAddress,3,REG[T]); break;
+        case STX : printf("STX..\n"); storeMemory(targetAddress,3,REG[X]); break;
+        // CONDITIONALS
+        case COMP : printf("COMP..\n"); COMPMnemonic(REG[A],value);  break;
+        case COMPF : COMPMnemonic(REG[F],value); break;
+        case COMPR : printf("COMPR..\n"); COMPMnemonic(REG[R1], REG[R2]); break; 
+        case J :    printf("J..\n");
+                    REG[PC] = targetAddress; break;
+        case JEQ : printf("JEQ..\n");
+                   if(CC=='=')
+                   REG[PC] = targetAddress; 
+                   break; 
+        case JGT : if(CC=='>')
+                   REG[PC] = targetAddress; 
+                   break;
+        case JLT : printf("JLT..\n");
+                   if(CC=='<')
+                   REG[PC] = targetAddress; 
+                   break;
+        case JSUB : printf("JSUB..\n");
+                    REG[L] = REG[PC]; 
+                    REG[PC] = targetAddress; 
+                    break;
+        case CLEAR : printf("CLEAR %d\n", R1); REG[R1] = 0; break;
+        case FIX : REG[A] = (int)(REG[F]); break;
+        case FLOAT : REG[F] = (float)(REG[A]); break;
+        case HIO : break;
+        case NORM : break;
+        case AND  : REG[A] = REG[A] & value; break;
+        case OR  : break;
+        case RMO : break;
+        case RSUB : printf("RSUB..\n"); REG[PC] = REG[L]; break;
+        case SHIFTL : break; 
+        case SIO : break; 
+        case SSK : break;
+        case SVC : break;
+        case RD  : printf("RD..\n"); CC='<'; break;
+        case TD : printf("TD..\n"); CC = '<'; break;
+        case TIO : CC = '<'; break;
+        case TIX : break;
+        case TIXR : printf("TIXR..\n"); CC = '<'; break;
+        case WD : break;
+    }
+    
+}
+
+
+int getFormat(long address){
+    long a = VMemory[address]/0x10;
+    if(a==0xC || a==0xF)
+        return 1;
+    if(a==9 || a == 0xA || a == 0xB)
+        return 2;
+    if(VMemory[address+1]&0x10) // check e bit 
+        return 4; 
+    return 3;
+}
 int run(){
-    return SUCCESS; 
+    long address = PROGADDR;
+    long targetAddress = 0; 
+    long value = 0; 
+    int addressMode = 0; 
+    REG[L] = PROGADDR;
+    long endADDR = 0;
+    int j = 0; 
+    for(int i = 0 ; i < 8 ; i++)
+        REG[i] = 0; 
+        
+    for(int i = 0; i < numOfFile; i ++){
+        if(ESTAB[i]!=NULL)
+            endADDR += ESTAB[i]->length;
+    }
+    REG[L] = PROGADDR + endADDR;
+    while(address <= PROGADDR + endADDR){
+     long opcode = VMemory[address] & 0xFC;
+     int addressMode = VMemory[address] - opcode;
+     int format = getFormat(address);  
+     REG[PC] += format; 
+     j++;
+     printf("%d)\n",j);
+     if(format==1){
+       targetAddress = fetchMemory(address,5) & 0x7FFF;
+     }else if(format==2){
+         R1 = VMemory[address+1]/0x10;
+         R2 = VMemory[address+1]%0x10; 
+     }else if(format >=3){
+        long xbpe = VMemory[address+1]/0x10;
+        targetAddress = fetchMemory(address + 1, format == 3 ?  3 : 5); 
+        if(xbpe&0x2){ // PC Relative
+            targetAddress += REG[PC];
+        }else if(xbpe&0x4){ // Base Relative
+            targetAddress += REG[B]; 
+      }
+
+        if(xbpe&0x8){ // Indexed 
+            targetAddress += REG[X];
+        }
+        switch(addressMode){
+            case 0 :  targetAddress = fetchMemory(address,5) & 0x7FFF;printf("SIC..\n"); break; // SIC
+            case 1 :  break;
+            case 2 :  targetAddress = fetchMemory(targetAddress,6); break;
+            case 3 :  printf("Simple...\n"); break;  
+        }
+         
+     }
+       execute(opcode,targetAddress); 
+       address = REG[PC]; 
+       j++;
+    printf("\t    A : %06lX X : %06lX\n", REG[A], REG[X]);
+    printf("\t    L : %06lX PC: %06lX\n", REG[L], REG[PC]);
+    printf("\t    B : %06lX S : %06lX\n", REG[B], REG[S]);
+    printf("\t    T : %06lX\n", REG[T]);
+    printf("---------------------------\n");
+   
+    }
+        return SUCCESS; 
 }
 int getCommand(){
     int i; 
