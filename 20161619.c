@@ -1633,10 +1633,14 @@ void storeMemory(long address, int bytes, long value) {
         value /= 0x100;
     }
 }
-void execute(long opcode, long targetAddress){
+void execute(long opcode, long targetAddress, int addressMode, int format ){
     long value; 
     value = targetAddress; 
-    printf("opcode %lX %lX\n", opcode, targetAddress);
+    printf("address mode : %d\n", addressMode);
+    if(addressMode==3){ // simple 
+        value = fetchMemory(targetAddress,6);
+    }
+    printf("opcode %lX %lX\n", opcode, value);
     switch(opcode){
         // ARITHMETICS 
         case ADD :  REG[A] = REG[A] + value; break;
@@ -1652,7 +1656,7 @@ void execute(long opcode, long targetAddress){
         case MULF : REG[F] = REG[F] * value; break;
         case MULR : REG[R2] = REG[R1] * REG[R2]; break;
          // LOAD AND STORE
-        case LDA : printf("LDA..\n");
+        case LDA : printf("LDA..%lX\n",value);
                     REG[A] = value; break;
         case LDB : printf("LDB..\n"); 
                     REG[B] = value;  break;
@@ -1711,10 +1715,10 @@ void execute(long opcode, long targetAddress){
         case SVC : break;
         case RD  : printf("RD..\n"); CC='<'; break;
         case TD : printf("TD..\n"); CC = '<'; break;
-        case TIO : CC = '<'; break;
-        case TIX : break;
-        case TIXR : printf("TIXR..\n"); CC = '<'; break;
-        case WD : break;
+        case TIO :  REG[X]++; CC = '<'; break;
+        case TIX :  REG[X]++; CC='<'; break;
+        case TIXR :  REG[X]++; printf("TIXR..\n"); CC = '<'; break;
+        case WD :  break;
     }
     
 }
@@ -1738,6 +1742,7 @@ int run(){
     REG[L] = PROGADDR;
     long endADDR = 0;
     int j = 0; 
+    int extended = 0;
     for(int i = 0 ; i < 8 ; i++)
         REG[i] = 0; 
         
@@ -1751,8 +1756,7 @@ int run(){
      int addressMode = VMemory[address] - opcode;
      int format = getFormat(address);  
      REG[PC] += format; 
-     j++;
-     printf("%d)\n",j);
+     printf("%d)\n",++j);
      if(format==1){
        targetAddress = fetchMemory(address,5) & 0x7FFF;
      }else if(format==2){
@@ -1761,26 +1765,26 @@ int run(){
      }else if(format >=3){
         long xbpe = VMemory[address+1]/0x10;
         targetAddress = fetchMemory(address + 1, format == 3 ?  3 : 5); 
-        if(xbpe&0x2){ // PC Relative
+        if(format == 3 ) {
+            if(xbpe&0x2){ // PC Relative
             targetAddress += REG[PC];
         }else if(xbpe&0x4){ // Base Relative
             targetAddress += REG[B]; 
-      }
-
-        if(xbpe&0x8){ // Indexed 
-            targetAddress += REG[X];
+        }
         }
         switch(addressMode){
-            case 0 :  targetAddress = fetchMemory(address,5) & 0x7FFF;printf("SIC..\n"); break; // SIC
+            case 0 :  targetAddress = fetchMemory(address,5) & 0x7FFF; printf("SIC..\n"); break; // SIC
             case 1 :  break;
             case 2 :  targetAddress = fetchMemory(targetAddress,6); break;
             case 3 :  printf("Simple...\n"); break;  
         }
-         
+
+        if(xbpe&0x8){ // Indexed 
+            targetAddress += REG[X];
+        }        
      }
-       execute(opcode,targetAddress); 
-       address = REG[PC]; 
-       j++;
+    execute(opcode,targetAddress,addressMode,format); 
+    address = REG[PC]; 
     printf("\t    A : %06lX X : %06lX\n", REG[A], REG[X]);
     printf("\t    L : %06lX PC: %06lX\n", REG[L], REG[PC]);
     printf("\t    B : %06lX S : %06lX\n", REG[B], REG[S]);
