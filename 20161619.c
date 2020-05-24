@@ -1279,7 +1279,7 @@ int handleBreakpoint(){ // bp command
            free(deleteNode);
         }
         bHead = NULL;
-        printf("successfully cleared breakpoints..\n");
+        printf("\t\t[ok] clear all breakpoints \n");
         return SUCCESS;
     }else{  // insert new break points 
         for(int i = 0 ; i < strlen(p); i++){ // check format
@@ -1571,7 +1571,8 @@ void COMPMnemonic(long a, long b){ // compare a and b and set CC
 int fetchMemory(int address, int hBytes) {
     int value = 0;
     int limit = (hBytes - 1 )/2;
-
+    if(address>MAX_MEMORY_SIZE-1)
+        return value; 
     if(hBytes%2){ // set initial value via bit operation 
         value = VMemory[address] % 0x10; 
     }else{
@@ -1848,7 +1849,6 @@ int getCommand(){
     }
     return SUCCESS;
 }
-
 int main(){
     FILE * ip;
     int opcode;
