@@ -1236,22 +1236,22 @@ int assemble(char * fileName){ // assemble assembly file
 /*
 PROJECT 3 Link and Loader 
 */
-int setProgaddr(){ // set program start address 
-   char * err;
-   if(numOfParams!=1 || isEmpty(params[0][0])){
-       printErrorMessage(ERROR_PARAMETER); // if wrong number of parameter is given 
-       return ERROR; 
-   }
-   long temp = strtol(params[0], &err, 16); // convert each parameter to long type
+int setProgaddr(){  //Set Program Load Address
+    char * err;
+    if(numOfParams!=1 || isEmpty(params[0][0])){
+        printErrorMessage(ERROR_PARAMETER); // if wrong number of parameter is given 
+        return ERROR;
+    }
+    long temp = strtol(params[0], &err, 16); // convert each parameter to long type
     if (temp < 0 || temp > MAX_MEMORY_SIZE-1){ // print error message if address is out of bound 
-            printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
-            PROGADDR = 0;
-            return ERROR;
-     }
+        printErrorMessage(ERROR_ADDRESS_OUT_OF_BOUND);
+        PROGADDR = 0; // reset PROGADDR 
+        return ERROR;
+    }
     PROGADDR = temp;
     return SUCCESS; 
 }
-int handleBreakpoint(){ // bp command
+int handleBreakpoint(){ // handle BP command
     char p[100];
     int idx = 0;
     int check = 0;
@@ -1268,41 +1268,41 @@ int handleBreakpoint(){ // bp command
         // print break points;
         printf("\t\tbreakpoint\n");
         printf("\t\t--------\n");
-        for(Break_Point * temp = bHead; temp!=NULL; temp=temp->next){
+        for(Break_Point * temp = bHead; temp!=NULL; temp=temp->next){ 
             printf("\t\t%lX\n",temp->address); 
         }
         return SUCCESS;
-    }else if(strcmp("clear",p)==0){ // clear break points 
-        for(Break_Point * temp = bHead; temp!=NULL;){
+    }else if(strcmp("clear",p)==0){ // bp clear 
+        for(Break_Point * temp = bHead; temp!=NULL;){ // loop through breakpoint list
            Break_Point * deleteNode = temp; 
            temp=temp->next;
-           free(deleteNode);
+           free(deleteNode); // free each node
         }
-        bHead = NULL;
+        bHead = NULL; // initialize break point Head pointer
         printf("successfully cleared breakpoints..\n");
         return SUCCESS;
-    }else{  // insert new break points 
-        for(int i = 0 ; i < strlen(p); i++){ // check format
-            if(!isHexadecimal(p[i])){
+    }else{
+        for(int i = 0 ; i < strlen(p); i++){
+            if(!isHexadecimal(p[i])){ // check format of input 
                 printf("Address should be given in hexadecimal format.\n");
-                return SUCCESS;
+                return ERROR;
             }
         }
         long hexValue =  strtol(p, NULL, 16); // convert each parameter to long type
-        if(hexValue > MAX_MEMORY_SIZE || hexValue < 0){ // SHOULD NOT EXCEED MAX LENGTH 
+        if(hexValue > MAX_MEMORY_SIZE || hexValue < 0){ // progaddr should be in the correct address range 
             printf("breakpoints cannot exceed max memory size..\n");
             return ERROR;
         }
         Break_Point * temp;
-        Break_Point * newNode = (Break_Point*)malloc(sizeof(Break_Point)); // create new node 
+        Break_Point * newNode = (Break_Point*)malloc(sizeof(Break_Point));
         newNode->address = hexValue;
         newNode->visited = 0; 
         newNode->next = NULL; 
-        if(bHead==NULL){ // if no previous node 
+        if(bHead==NULL){ // if bHead is not set yet 
             bHead = newNode; 
         }else {
-            for(temp = bHead; temp->next!=NULL; temp=temp->next); // attach to end of previous node 
-            temp->next = newNode; 
+            for(temp = bHead; temp->next!=NULL; temp=temp->next); // get last node 
+            temp->next = newNode;  // attach to last node
         }
         printf("\t\t[ok] create breakpoint %s\n", p); 
         return SUCCESS;
@@ -1312,30 +1312,30 @@ void resetESTAB(){ // initialize estab
     for(int i = 0 ; i < 3; i++)
         ESTAB[i] = NULL;
 }
-ESTAB_Table * findESTAB(char * symbol){ // find symbol in ESTAB table 
-    for(int i = 0; i < numOfFile; i++){
+ESTAB_Table * findESTAB(char * symbol){ // return element from ESTAB. return null if not found 
+    for(int i = 0; i < numOfFile; i++){ // loop through all estab tables
         for(ESTAB_Table * temp=ESTAB[i]; temp!=NULL; temp=temp->next){
             if(strcmp(temp->symbol,symbol)==0){
                return temp;
             }
         }
     }
-    return NULL;  // return null if not found 
+    return NULL; 
 }
-int insertESTAB(char * symbol, long address, long length){ // insert symbol into ESTAB table 
+int insertESTAB(char * symbol, long address, long length){
     ESTAB_Table * newElem = (ESTAB_Table *) malloc(sizeof(ESTAB_Table)); 
     newElem->address = address;
     newElem->length = length;
-    newElem->next=NULL;
     memset(newElem->symbol,0,sizeof(newElem->symbol));
     strcpy(newElem->symbol,symbol);
+    newElem->next=NULL;
     ESTAB_Table * temp;
-    if(ESTAB[currentFileNum]==NULL){ // if control section name is not inserted yet
-          for(int i = 0 ; i < 3; i++){
+    if(ESTAB[currentFileNum]==NULL){ // insert control section name 
+          for(int i = 0 ; i < 3; i++){ // check for duplicate 
             if(i==currentFileNum){
                 continue;
             }
-            for(temp = ESTAB[i]; temp!=NULL; temp=temp->next){
+            for(temp = ESTAB[i]; temp!=NULL; temp=temp->next){ // check ESTAB for other object files for duplicates
             if(strcmp(temp->symbol,symbol)==0){
                 printf("Duplicate External symbol %s\n", symbol);
                 return ERROR;
@@ -1343,28 +1343,28 @@ int insertESTAB(char * symbol, long address, long length){ // insert symbol into
             } 
           }
         ESTAB[currentFileNum]=newElem;
-    }else{ // insert external symbol 
-        for(temp = ESTAB[currentFileNum]; temp->next!=NULL; temp=temp->next){
-            if(strcmp(temp->symbol,symbol)==0){ // check for duplicates 
+    }else{ // insert external symbols 
+        for(temp = ESTAB[currentFileNum]; temp->next!=NULL; temp=temp->next){ // check for duplicate external symbol 
+            if(strcmp(temp->symbol,symbol)==0){
                 printf("Duplicate External symbol\n");
                 return ERROR;
             }
         }
-        temp->next = newElem; 
-        for(int i = 0 ; i < 3; i++){
+        for(int i = 0 ; i < 3; i++){ // check ESTAB for other object files for duplicates
             if(i!=currentFileNum){
             for(temp = ESTAB[i]; temp!=NULL; temp=temp->next){
-            if(strcmp(temp->symbol,symbol)==0){ // check for duplicates 
+            if(strcmp(temp->symbol,symbol)==0){
                 printf("Duplicate External symbol\n");
                 return ERROR;
             }
             }
-        } 
+            } 
         }
+        temp->next = newElem; 
     }
     return SUCCESS;
 }
-int LoaderPassOne(){ // check for head and definition records 
+int LoaderPassOne(){
     char line[1000];
     char addr[100];
     char symbol[8]; 
@@ -1372,9 +1372,11 @@ int LoaderPassOne(){ // check for head and definition records
     CSADDR = PROGADDR; // set csaddr to progaddr for first control section
     long len = 0;
     long address;
+    printf("num of file.. %d\n", numOfFile);
     for(int i = 0 ; i < numOfFile; i++){
         currentFileNum = i; 
      while(fgets(line,sizeof(line),objf[i])!=NULL){ // while end of input 
+        printf("lolo\n");
         memset(symbol,0,sizeof(symbol)); 
         memset(addr,0,sizeof(address));
         if(line[0]=='H'){ // HEADER record 
@@ -1408,7 +1410,7 @@ int LoaderPassOne(){ // check for head and definition records
     }
     return SUCCESS;
 }
-int LoaderPassTwo(){ // check for T, R, M records
+int LoaderPassTwo(){
     char line[1000];
     char addr[100];
     char symbol[100];
@@ -1485,8 +1487,8 @@ int LoaderPassTwo(){ // check for T, R, M records
                     objectValue = 0xFFFFFF - objectValue + 1;
                     objectValue = -objectValue;
             }
-            objectValue += (line[9] == '-' ? -1 : 1) * refElem->address;  // add or subtract symbol address 
-            if(objectValue < 0) { // check for negative 
+            objectValue += (line[9] == '-' ? -1 : 1) * refElem->address;  // add or subtract symbol address
+            if(objectValue < 0) { // if negative value 
                     objectValue -= 0xFFFFFFFFFF000000;
             }
             sprintf(objectCode,"%06lX",objectValue);
@@ -1498,7 +1500,7 @@ int LoaderPassTwo(){ // check for T, R, M records
              }
         }
         else if(line[0]=='E'){ // END Record
-            if(!isEmpty(line[1])) { // if end address is specified 
+            if(!isEmpty(line[1])) {
                 strncpy(addr,line+1,6);
                 EXECADDR = CSADDR; 
                 EXECADDR += strtol(addr,&err,16);
@@ -1511,17 +1513,21 @@ int LoaderPassTwo(){ // check for T, R, M records
     return SUCCESS;
 }
 int loader(){
-    resetESTAB(); // initalize ESTAB
-    if(!LoaderPassOne()) // pass 1 for constructing ESTAB 
+    resetESTAB();
+    for(int i = 0; i < 8; i++) // reset registers 
+        REG[i] = 0; 
+    printf("immfffm\n");
+    if(!LoaderPassOne())
         return ERROR;
-    for(int i = 0 ; i < numOfFile;i++) // reset file pointer to start of file 
+    printf("immm\n");
+    for(int i = 0 ; i < numOfFile;i++) // put pointer back to beginning of file 
         rewind(objf[i]); 
-    if(!LoaderPassTwo()) // pass 2 for loading object code into memory
+    if(!LoaderPassTwo())
         return ERROR;
-
+    printf("I am here\n");
     REG[L] = CSADDR; // update L register
     // PRINT ESTAB INFO 
-    printf("control symbol address length\n");
+    printf("control symbol address length\n"); // print out ESTAB 
     printf("section name\n");
     printf("--------------------------------\n");
     for(int i = 0; i < numOfFile; i++){
@@ -1538,31 +1544,27 @@ int loader(){
     return SUCCESS; 
 }
 int checkObjectfile(){
-char input[10] = "";
+   char input[10] = "";
    int last = 0;
    int idx1,idx2,idx3,i;
    char filename[3][100]; 
    char temp[100];
    memset(filename,0,sizeof(filename));
    int previousSpace = 1; 
-   // get file name
    numOfFile = sscanf(userInput,"%100s %100s %100s %100s\n", temp, filename[0],filename[1],filename[2])-1; 
    if(numOfFile==0){
        printf("At least one input file is required..\n");
        return ERROR; 
    }
+   printf("%d\n", numOfFile);
    for(int i =0; i < numOfFile;i++){
-       char * ext = strrchr(filename[i], '.');
-       if(strcmp(ext,".obj")!=0){ // if not object file 
-           printf("Only object file can be loaded..\n");
-           return ERROR;
-       }
    objf[i] = fopen(filename[i],"r");
    if(objf[i]==NULL){
        printf("filename %s not found in directory..\n",filename[0]);
        return ERROR;
    }
    }
+   printf("DONE!\n");
    return SUCCESS;
 }
 void COMPMnemonic(long a, long b){
@@ -1716,6 +1718,12 @@ int breakpointExists(long address){
     }
     return 0; 
 }
+void printRegisters(){
+   printf("\tA : %06lX X : %06lX\n", REG[A], REG[X]);
+   printf("\tL : %06lX PC: %06lX\n", REG[L], REG[PC]);
+   printf("\tB : %06lX S : %06lX\n", REG[B], REG[S]);
+   printf("\tT : %06lX\n", REG[T]);
+}
 int run(){
     long address = PROGADDR;
     long targetAddress = 0; 
@@ -1733,7 +1741,7 @@ int run(){
             endADDR += ESTAB[i]->length;
     }
     REG[L] = PROGADDR + endADDR;
-    while(address < PROGADDR + endADDR){
+    while(address <= PROGADDR + endADDR){
      long opcode = VMemory[address] & 0xFC;
      int addressMode = VMemory[address] - opcode;
      int format = getFormat(address);  
@@ -1772,29 +1780,30 @@ int run(){
      }
 
     execute(opcode,targetAddress,addressMode,format); 
-    address = REG[PC]; 
+
+     address = REG[PC]; 
     if(breakpointExists(address)){
-        printf("\tA : %06lX X : %06lX\n", REG[A], REG[X]);
-        printf("\tL : %06lX PC: %06lX\n", REG[L], REG[PC]);
-        printf("\tB : %06lX S : %06lX\n", REG[B], REG[S]);
-        printf("\tT : %06lX\n", REG[T]);
+        printRegisters();
         printf("\tStop at checkpoint[%lX]\n", address);
         last_address = address;
         return SUCCESS;
     }
-    
-    }
+     if(address>=PROGADDR+endADDR){
         for(Break_Point * temp = bHead; temp!=NULL; temp=temp->next){
             temp->visited = 0;
         }
-        printf("\tA : %06lX X : %06lX\n", REG[A], REG[X]);
-        printf("\tL : %06lX PC: %06lX\n", REG[L], REG[PC]);
-        printf("\tB : %06lX S : %06lX\n", REG[B], REG[S]);
-        printf("\tT : %06lX\n", REG[T]);
+        printRegisters();
         printf("\t\tEnd Program\n");
         last_address = -1; 
- 
-return SUCCESS; 
+        return SUCCESS; 
+    } 
+    }
+    for(Break_Point * temp = bHead; temp!=NULL; temp=temp->next){
+        temp->visited = 0;
+    }
+    printRegisters();
+    printf("\t\tEnd Program\n");
+    return SUCCESS; 
 }
 int getCommand(){
     int i; 
