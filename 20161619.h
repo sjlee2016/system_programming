@@ -54,7 +54,13 @@ typedef struct ESTAB_Table{
     char symbol[100]; 
     struct ESTAB_Table * next; 
 }ESTAB_Table; 
-ESTAB_Table * ESTAB[3];
+
+typedef struct Break_Point{
+    int visited;
+    long address; 
+    struct Break_Point * next;
+}Break_Point; 
+
 h_node head;  // points to the head of linked list of history node
 h_node current; // points to the current node of history node 
 Table_Element * HashTable [MAX_HASH_SIZE]; // hash table used to store opcode info 
@@ -119,11 +125,13 @@ long EXECADDR = 0; // Execution control section address
 int numOfFile; // num of files given in loader command
 int currentFileNum; // current file number being loaded
 FILE * objf[3];  
-char breakpoints[10000][8];  // store break points
+long last_address = 0;
 int bpNum = 0; // number of break points
 long REG[9]; // store register values 
 int R1, R2 = 0; // register 1 and 2 for format 2 
-char CC; 
+char CC; // conditional flag 
+ESTAB_Table * ESTAB[3];
+Break_Point * bHead; 
 typedef enum{
     A = 0,
     X = 1,

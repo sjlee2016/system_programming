@@ -1269,12 +1269,17 @@ int handleBreakpoint(){
         // print break points;
         printf("\t\tbreakpoint\n");
         printf("\t\t--------\n");
-        for(int i = 0; i < bpNum; i++){
-            printf("\t\t%s\n", breakpoints[i]);           
+        for(Break_Point * temp = bHead; temp!=NULL; temp=temp->next){
+            printf("\t\t%lX\n",temp->address); 
         }
         return SUCCESS;
     }else if(strcmp("clear",p)==0){
-        bpNum = 0; 
+        for(Break_Point * temp = bHead; temp!=NULL;){
+           Break_Point * deleteNode = temp; 
+           temp=temp->next;
+           free(deleteNode);
+        }
+        bHead = NULL;
         printf("successfully cleared breakpoints..\n");
         return SUCCESS;
     }else{
@@ -1285,15 +1290,21 @@ int handleBreakpoint(){
             }
         }
         long hexValue =  strtol(p, NULL, 16); // convert each parameter to long type
-        if(hexValue > MAX_MEMORY_SIZE){ // SHOULD NOT EXCEED MAX LENGTH 
+        if(hexValue > MAX_MEMORY_SIZE || hexValue < 0){ // SHOULD NOT EXCEED MAX LENGTH 
             printf("breakpoints cannot exceed max memory size..\n");
             return ERROR;
         }
-        if(bpNum>10000){
-            printf("breakpoints maximum limit reached..\n");
-            return ERROR;
+        Break_Point * temp;
+        Break_Point * newNode = (Break_Point*)malloc(sizeof(Break_Point));
+        newNode->address = hexValue;
+        newNode->visited = 0; 
+        newNode->next = NULL; 
+        if(bHead==NULL){
+            bHead = newNode; 
+        }else {
+            for(temp = bHead; temp->next!=NULL; temp=temp->next);
+            temp->next = newNode; 
         }
-        strcpy(breakpoints[bpNum++],p); 
         printf("\t\t[ok] create breakpoint %s\n", p); 
         return SUCCESS;
     }
@@ -1618,12 +1629,13 @@ void COMPMnemonic(long a, long b){
 
 int fetchMemory(int address, int hBytes) {
     int value = 0;
+    int limit = (hBytes - 1 )/2;
     if(hBytes%2){
         value = VMemory[address] % 0x10;
     }else{
         value = VMemory[address] % 0x100;
     }
-    for(int i = 1; i <= (hBytes - 1) / 2; i++) {
+    for(int i = 1; i <= limit; i++) {
         value *= 0x100; // increase byte
         value += VMemory[address + i];
     }
@@ -1717,7 +1729,7 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){
         case SVC : break;
         case RD  :  CC='<'; break;
         case TD :   CC = '<'; break;
-        case TIO :  REG[X]++; CC = '<'; break;
+        case TIO :  REG[X]++; CC = '<'; break; // Device is already ready 
         case TIX :  REG[X]++; CC='<'; break;
         case TIXR :  REG[X]++; 
                      CC = '=';
@@ -1746,11 +1758,14 @@ int getFormat(long address){
 int breakpointExists(long address){
     long add;
     char * err;
-    for(int i = 0; i < 10000; i++) {
-        if(strtol(breakpoints[i],&err,16)==address){
-            memset(breakpoints[i],0,sizeof(breakpoints[i]));
+    Break_Point * temp;
+    temp = bHead; 
+    while(temp){
+        if(temp->address==address&&temp->visited==0&&last_address!=address){
+            temp->visited = 1;
             return 1;
         }
+        temp=temp->next;
     }
     return 0; 
 }
@@ -1790,9 +1805,11 @@ int run(){
             }
             if(xbpe&0x2){ // PC Relative
             targetAddress += REG[PC];
-        }else if(xbpe&0x4){ // Base Relative
+             }else if(xbpe&0x4){ // Base Relative
             targetAddress += REG[B]; 
-        }
+             }
+        }else{
+
         }
         
         switch(addressMode){
@@ -1815,15 +1832,20 @@ int run(){
         printf("\tB : %06lX S : %06lX\n", REG[B], REG[S]);
         printf("\tT : %06lX\n", REG[T]);
         printf("\tStop at checkpoint[%lX]\n", address);
+        last_address = address;
         return SUCCESS;
     }
     
-}
+    }
+        for(Break_Point * temp = bHead; temp!=NULL; temp=temp->next){
+            temp->visited = 0;
+        }
         printf("\tA : %06lX X : %06lX\n", REG[A], REG[X]);
         printf("\tL : %06lX PC: %06lX\n", REG[L], REG[PC]);
         printf("\tB : %06lX S : %06lX\n", REG[B], REG[S]);
         printf("\tT : %06lX\n", REG[T]);
         printf("\t\tEnd Program\n");
+        last_address = -1; 
  
 return SUCCESS; 
 }
