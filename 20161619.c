@@ -1538,34 +1538,29 @@ int loader(){
     return SUCCESS; 
 }
 int checkObjectfile(){
-char input[10] = "";
-   int last = 0;
-   int idx1,idx2,idx3,i;
    char filename[3][100]; 
    char temp[100];
-   memset(filename,0,sizeof(filename));
-   int previousSpace = 1; 
-   // get file name
+   memset(filename,0,sizeof(filename)); // intialize filename
    numOfFile = sscanf(userInput,"%100s %100s %100s %100s\n", temp, filename[0],filename[1],filename[2])-1; 
-   if(numOfFile==0){
+   if(numOfFile==0){ // no filename is given 
        printf("At least one input file is required..\n");
        return ERROR; 
    }
-   for(int i =0; i < numOfFile;i++){
-       char * ext = strrchr(filename[i], '.');
+   for(int i =0; i < numOfFile;i++){ // loop through all filename
+       char * ext = strrchr(filename[i], '.'); 
        if(strcmp(ext,".obj")!=0){ // if not object file 
            printf("Only object file can be loaded..\n");
            return ERROR;
        }
-   objf[i] = fopen(filename[i],"r");
-   if(objf[i]==NULL){
-       printf("filename %s not found in directory..\n",filename[0]);
-       return ERROR;
-   }
+        objf[i] = fopen(filename[i],"r");
+         if(objf[i]==NULL){ // if file cannot be found 
+          printf("filename %s not found in directory..\n",filename[i]);
+         return ERROR;
+         }
    }
    return SUCCESS;
 }
-void COMPMnemonic(long a, long b){
+void COMPMnemonic(long a, long b){ // compare a and b and set CC 
      if(a < b){
         CC = '<';
     }else if(a > b){
@@ -1573,12 +1568,12 @@ void COMPMnemonic(long a, long b){
     }else 
         CC = '='; 
 }
-
 int fetchMemory(int address, int hBytes) {
     int value = 0;
     int limit = (hBytes - 1 )/2;
-    if(hBytes%2){
-        value = VMemory[address] % 0x10;
+
+    if(hBytes%2){ // set initial value via bit operation 
+        value = VMemory[address] % 0x10; 
     }else{
         value = VMemory[address] % 0x100;
     }
@@ -1589,19 +1584,20 @@ int fetchMemory(int address, int hBytes) {
     return value;
 }
 
-void storeMemory(long address, int bytes, long value) {
-    for(int i = address + bytes - 1; i >= address && address < MAX_MEMORY_SIZE ; i--) {
-        VMemory[i] = value & 0xFF; // mask over lower byte
+void storeMemory(long address, int bytes, long value) { // store value into VMemory 
+    int i = address + bytes - 1;
+    for(; i >= address && address < MAX_MEMORY_SIZE ; i--) {
+        VMemory[i] = value & 0xFF; 
         value /= 0x100;
     }
 }
-void execute(long opcode, long targetAddress, int addressMode, int format ){
+void execute(long opcode, long targetAddress, int addressMode, int format ){ // execute instruction 
     long value; 
     value = targetAddress; 
-    if(addressMode==3){ // simple 
+    if(addressMode==3){ // if simple addressing mode 
         value = fetchMemory(targetAddress,6);
     }
-    switch(opcode){
+    switch(opcode){ // execute approp
         // ARITHMETICS 
         case ADD :  REG[A] = REG[A] + value; break;
         case ADDF : REG[F] = REG[F] + value; break; 
@@ -1620,10 +1616,8 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){
         case MULF : REG[F] = REG[F] * value; break;
         case MULR : REG[R2] = REG[R1] * REG[R2]; break;
          // LOAD AND STORE
-        case LDA : 
-                    REG[A] = value; break;
-        case LDB :  
-                    REG[B] = value;  break;
+        case LDA : REG[A] = value; break;
+        case LDB :  REG[B] = value;  break;
         case LDCH : REG[A] = REG[A] & 0xFFFFFF00; // lower 3 bytes 
                     REG[A] = REG[A] + (value / 0x10000); break;
         case LDF : REG[F] = value; break;
@@ -1632,10 +1626,10 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){
         case LDT : REG[T] = value;  break;
         case LDX : REG[X] = value;  break;
         case LPS : REG[S] = value;  break;
-        case STA : storeMemory(targetAddress,3,REG[A]); break;
+        case STA : storeMemory(targetAddress,3,REG[A]); break; // store value to target address
         case STB : storeMemory(targetAddress,3,REG[B]); break;
-        case STCH : VMemory[targetAddress] = REG[A] & 0xFF; break; 
-        case STF : storeMemory(targetAddress,6,REG[F]); break;
+        case STCH : VMemory[targetAddress] = REG[A] & 0xFF; break;  // store lower byte value to target address
+        case STF : storeMemory(targetAddress,6,REG[F]); break; // store value(6 bytes) to target address
         case STI : break;
         case STL : storeMemory(targetAddress,3,REG[L]); break;
         case STS : storeMemory(targetAddress,3,REG[S]); break;
@@ -1643,11 +1637,11 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){
         case STT : storeMemory(targetAddress,3,REG[T]); break;
         case STX : storeMemory(targetAddress,3,REG[X]); break;
         // CONDITIONALS
-        case COMP : COMPMnemonic(REG[A],value);  break;
+        case COMP : COMPMnemonic(REG[A],value);  break; // compare mnemonics and update CC 
         case COMPF : COMPMnemonic(REG[F],value); break;
         case COMPR :COMPMnemonic(REG[R1], REG[R2]); break; 
-        case J :   REG[PC] = targetAddress; break;
-        case JEQ : if(CC=='=')
+        case J :   REG[PC] = targetAddress; break; // update pc register to TA value
+        case JEQ : if(CC=='=')   // update pc register to TA if condition is met 
                    REG[PC] = targetAddress; 
                    break; 
         case JGT : if(CC=='>')
@@ -1658,8 +1652,8 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){
                    REG[PC] = targetAddress; 
                    break;
         case JSUB : 
-                    REG[L] = REG[PC]; 
-                    REG[PC] = targetAddress; 
+                    REG[L] = REG[PC];  // update L register to PC value 
+                    REG[PC] = targetAddress;  // update PC register to TA 
                     break;
         case CLEAR : REG[R1] = 0; break;
         case FIX : REG[A] = REG[F]; break;
@@ -1667,7 +1661,7 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){
         case HIO : break;
         case NORM : break;
         case AND  : REG[A] = REG[A] & value; break;
-        case OR  : break;
+        case OR  : REG[A] = REG[A] | value; break;
         case RMO : break;
         case RSUB : REG[PC] = REG[L]; break;
         case SHIFTL : break; 
@@ -1676,7 +1670,7 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){
         case SVC : break;
         case RD  :  CC='<'; break;
         case TD :   CC = '<'; break;
-        case TIO :  REG[X]++; CC = '<'; break; // Device is already ready 
+        case TIO :  REG[X]++; CC = '<'; break; // Device is always ready 
         case TIX :  REG[X]++; CC='<'; break;
         case TIXR :  REG[X]++; 
                      CC = '=';
@@ -1691,110 +1685,108 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){
     
 }
 
-int getFormat(long address){
+int getFormat(long address){ // return format of the object code 
     long a = VMemory[address]/0x10;
-    if(a==0xC || a==0xF)
+    if(a==0xC || a==0xF) // format 1 
         return 1;
-    if(a==9 || a == 0xA || a == 0xB)
+    if(a==9 || a == 0xA || a == 0xB) // format 2 
         return 2;
     if(VMemory[address+1]&0x10) // check e bit 
-        return 4; 
-    return 3;
+        return 4;  // format 4 if e bit is set 
+    return 3; // format 3 
 }
 
-int breakpointExists(long address){
-    long add;
-    char * err;
+int breakpointExists(long address){ // return 1 if break point exists 
     Break_Point * temp;
     temp = bHead; 
-    while(temp){
+    while(temp){ // loop through list 
         if(temp->address==address&&temp->visited==0&&last_address!=address){
-            temp->visited = 1;
-            return 1;
+            temp->visited = 1;  // if breakpoint was not visited previously 
+            return 1;            
         }
         temp=temp->next;
     }
-    return 0; 
+    return 0;  // breakpoint not found 
 }
-int run(){
+void printRegisters(long address, int option){ // print register values
+    printf("\tA : %06lX X : %06lX\n", REG[A], REG[X]);
+    printf("\tL : %06lX PC: %06lX\n", REG[L], REG[PC]);
+    printf("\tB : %06lX S : %06lX\n", REG[B], REG[S]);
+    printf("\tT : %06lX\n", REG[T]);
+    if(option == 0){ // if it's break point
+        printf("\tStop at checkpoint[%lX]\n", address);
+        last_address = address;
+    }else{ // if end of program 
+         for(Break_Point * temp = bHead; temp!=NULL; temp=temp->next){ // initalize break point
+                 temp->visited = 0; // mark them as unvisited 
+         }
+        printf("\t\tEnd Program\n");
+        last_address = -1; 
+    }
+}
+int run(){  // run program from progaddr 
     long address = PROGADDR;
     long targetAddress = 0; 
     long value = 0; 
     int addressMode = 0; 
-    REG[L] = PROGADDR;
     long endADDR = 0;
     int j = 0; 
     int extended = 0;
-    for(int i = 0 ; i < 8 ; i++)
+    REG[L] = PROGADDR;
+    for(int i = 0 ; i < 8 ; i++) // initialize registers 
         REG[i] = 0; 
-        
-    for(int i = 0; i < numOfFile; i ++){
+    for(int i = 0; i < numOfFile; i ++){ // get length of each control section 
         if(ESTAB[i]!=NULL)
             endADDR += ESTAB[i]->length;
     }
-    REG[L] = PROGADDR + endADDR;
-    while(address < PROGADDR + endADDR){
-     long opcode = VMemory[address] & 0xFC;
-     int addressMode = VMemory[address] - opcode;
-     int format = getFormat(address);  
-     REG[PC] += format; 
-     if(format==1){
+    REG[L] = PROGADDR + endADDR; // update L register 
+    while(address <= PROGADDR + endADDR){ // loop until end of program 
+     long opcode = VMemory[address] & 0xFC; // get opcode using and bit operation 
+     int addressMode = VMemory[address] - opcode; 
+     int format = getFormat(address);  // get opcode format
+     REG[PC] += format;  // add PC 
+     if(format==1){ 
        targetAddress = fetchMemory(address,5) & 0x7FFF;
      }else if(format==2){
-         R1 = VMemory[address+1]/0x10;
+         R1 = VMemory[address+1]/0x10; // fetch register 1 and 2 from next byte
          R2 = VMemory[address+1]%0x10; 
-     }else if(format >=3){
-        long xbpe = VMemory[address+1]/0x10;
-        targetAddress = fetchMemory(address + 1, format == 3 ?  3 : 5); 
-        if(format == 3 ) {
-            if(targetAddress >= 0xF00){
+     }else if(format >=3){ // format 3 and 4 
+        long xbpe = VMemory[address+1]/0x10; // fetch xbpe value 
+        targetAddress = fetchMemory(address + 1, format == 3 ?  3 : 5); // calculate TA according to format type 
+        if(format == 3 ) { // check PC relative or base relative if format 3 
+            if(targetAddress >= 0xF00){ // check for overflow 
               targetAddress =  -(0xFFF-targetAddress+1);
             }
-            if(xbpe&0x2){ // PC Relative
-            targetAddress += REG[PC];
-             }else if(xbpe&0x4){ // Base Relative
-            targetAddress += REG[B]; 
-             }
-        }else{
-
+            if(xbpe&0x2){ //  PC Relative
+                targetAddress += REG[PC]; // add PC value to TA
+            }else if(xbpe&0x4){ // b flag is set. Base Relative
+                targetAddress += REG[B];  // add Base value to TA 
+            }
         }
-        
-        switch(addressMode){
+        // simple address is already calulcated. 
+        switch(addressMode){ // update TA according to address mode 
             case 0 :  targetAddress = fetchMemory(address,5) & 0x7FFF; break; // SIC
-            case 1 :  break;
-            case 2 :  targetAddress = fetchMemory(targetAddress,6); break;
-            case 3 :  break;  
+            case 1 :  break; // Immediate address
+            case 2 :  targetAddress = fetchMemory(targetAddress,6); break; // Indirect
+            case 3 :  break;  // simple address 
         }
-
         if(xbpe&0x8){ // Indexed 
             targetAddress += REG[X];
         }        
      }
-
-    execute(opcode,targetAddress,addressMode,format); 
-    address = REG[PC]; 
-    if(breakpointExists(address)){
-        printf("\tA : %06lX X : %06lX\n", REG[A], REG[X]);
-        printf("\tL : %06lX PC: %06lX\n", REG[L], REG[PC]);
-        printf("\tB : %06lX S : %06lX\n", REG[B], REG[S]);
-        printf("\tT : %06lX\n", REG[T]);
-        printf("\tStop at checkpoint[%lX]\n", address);
-        last_address = address;
+     execute(opcode,targetAddress,addressMode,format);  // execute instruction
+     address = REG[PC];  // update address to PC register value 
+    if(breakpointExists(address)){ // check if break point exists in the address 
+        printRegisters(address,0);
         return SUCCESS;
     }
-    
+    if(address>=PROGADDR+endADDR){ // end of program 
+    printRegisters(address,1);
+    return SUCCESS; 
     }
-        for(Break_Point * temp = bHead; temp!=NULL; temp=temp->next){
-            temp->visited = 0;
-        }
-        printf("\tA : %06lX X : %06lX\n", REG[A], REG[X]);
-        printf("\tL : %06lX PC: %06lX\n", REG[L], REG[PC]);
-        printf("\tB : %06lX S : %06lX\n", REG[B], REG[S]);
-        printf("\tT : %06lX\n", REG[T]);
-        printf("\t\tEnd Program\n");
-        last_address = -1; 
- 
-return SUCCESS; 
+    }
+    printRegisters(address,1); // for handling run when no program is loaded yet
+    return SUCCESS; 
 }
 int getCommand(){
     int i; 
