@@ -48,19 +48,6 @@ typedef struct Relocation_Element{ // node used to store address of relocation
     struct Relocation_Element* next;
 }Relocation_Element;
 
-typedef struct ESTAB_Table{
-    long address;
-    long length;
-    char symbol[100]; 
-    struct ESTAB_Table * next; 
-}ESTAB_Table; 
-
-typedef struct Break_Point{
-    int visited;
-    long address; 
-    struct Break_Point * next;
-}Break_Point; 
-
 h_node head;  // points to the head of linked list of history node
 h_node current; // points to the current node of history node 
 Table_Element * HashTable [MAX_HASH_SIZE]; // hash table used to store opcode info 
@@ -118,20 +105,34 @@ char objName [200]; // store file name for object file
 char lstName [200]; // store file name for immediate file 
 
 // PROJECT 3 
+
+typedef struct ESTAB_Table{ // node used to store external symbols 
+    long address;
+    long length; // length only used for control section name 
+    char symbol[100]; 
+    struct ESTAB_Table * next; 
+}ESTAB_Table; 
+
+typedef struct Break_Point{ // node used to store break points 
+    int visited; // if break point was already visited 
+    long address; 
+    struct Break_Point * next;
+}Break_Point; 
+
 long PROGADDR = 0;   //Program Load Address. Starting address in memory where the linked program is to be loaded.
 long CSADDR = 0; // Control Section Address.Starting address assigned to the control section currently being scanner by the loader  
 long CSLTH = 0; // Length of Control Section
 long EXECADDR = 0; // Execution control section address 
 int numOfFile; // num of files given in loader command
 int currentFileNum; // current file number being loaded
-FILE * objf[3];  
-long last_address = 0;
+FILE * objf[3];   // store 3 object files 
+long last_address = 0; // store address of last executed address 
 int bpNum = 0; // number of break points
 long REG[9]; // store register values 
 int R1, R2 = 0; // register 1 and 2 for format 2 
 char CC; // conditional flag 
-ESTAB_Table * ESTAB[3];
-Break_Point * bHead; 
+ESTAB_Table * ESTAB[3]; // ESTAB for each object file 
+Break_Point * bHead; // head node for break point linked list
 typedef enum{
     A = 0,
     X = 1,
@@ -142,9 +143,9 @@ typedef enum{
     F = 6,
     PC = 7,
     SW = 8
-}Register;
+}Register; // Register number
 
-typedef enum{
+typedef enum{ // opcode for mnemonics 
     ADD = 0x18,
     ADDF = 0x58,
     ADDR = 0x90,
@@ -205,10 +206,130 @@ typedef enum{
     WD = 0xDC
 }MNENOMIC; 
 
-
-
-
 //// USER-DEFINED FUNCTIONS 
+/******************************************************
+ * setProgaddr 
+ * set program start address
+ * returns 0 if failed to set PROGADDR(Out of range). 
+ * returns 1 if successful 
+ * ****************************************************/
+int setProgaddr();
+
+/******************************************************
+ * handleBreakpoint
+ * handles printing out breakpoints, clearing breakpoint and adding
+ * new breakpoint. returns 0 if error 1 if successful
+ * ****************************************************/
+int handleBreakpoint();
+
+/******************************************************
+ * resetESTAB
+ * initalize ESTAB. Called each time new program is loaded  
+ * ****************************************************/
+void resetESTAB();
+
+/******************************************************
+ * findESTAB
+ * find external symbol from ESTAB table
+ * returns null if not found 
+ * ****************************************************/
+ESTAB_Table * findESTAB(char * symbol);
+
+/******************************************************
+ * insertESTAB
+ * insert new external symbol to ESTAB 
+ * returns 0 if error(duplicate symbol definition)
+ * returns 1 if successful
+ * ****************************************************/
+int insertESTAB(char * symbol, long address, long length);
+
+/******************************************************
+ * LoaderPassOne
+ * pass one of loading and linking process.
+ * reads H, E and D record to insert symbols into ESTAB, which
+ * will be used in pass 2 
+ * returns 1 if successful and 0 otherwise 
+ * ****************************************************/
+int LoaderPassOne();
+
+/******************************************************
+ * LoaderPassTwo
+ * uses values from ESTAB updated by load pass 1
+ * to read T,M and R records and update memory 
+ * return 1 if successful and 0 otherwise
+ * ****************************************************/
+int LoaderPassTwo();
+
+/******************************************************
+ * loader
+ * uses LoaderPassOne and LoaderPassTwo to load program into memory
+ * returns 1 if successful and 0 otherwise 
+ * ****************************************************/
+int loader();
+
+/******************************************************
+ * checkObjectfile
+ * reads object file name from command and
+ * stores file into objf array. returns 0 if there is error in command
+ * returns 1 if successful.
+ * ****************************************************/
+int checkObjectfile();
+
+/******************************************************
+ * COMPMnemonic
+ * used for COMP, COMPF, COMPR opcodes
+ * compares a and b and stores the result into CC 
+ * ****************************************************/
+void COMPMnemonic(long a, long b);
+
+/******************************************************
+ * fetchMemory
+ * fetch value from memory at the given address 
+ * according to number of half bytes 
+ * ****************************************************/
+int fetchMemory(int address, int hBytes);
+
+/******************************************************
+ * storeMemory
+ * store value to memory at given address
+ * ****************************************************/
+void storeMemory(long address, int bytes, long value);
+
+/******************************************************
+ * getFormat
+ * returns address format of the object code at the given address
+ * ****************************************************/
+int getFormat(long address);
+
+/******************************************************
+ * execute 
+ * execute instruction using the opcode, target address, address mode
+ * and address format 
+ * ****************************************************/
+void execute(long opcode, long targetAddress, int addressMode, int format );
+
+/******************************************************
+ * breakpointExists 
+ * returns 1 if breakpoint exists in the given address
+ * returns 0 if not 
+ * ****************************************************/
+int breakpointExists(long address);
+
+/******************************************************
+ * printRegisters 
+ * prints out the values of registers at the given address
+ * if option is 0, the current address is breakpoint
+ * if option is 1, the current address is the end address of the program
+ * ****************************************************/
+void printRegisters(long address, int option);
+
+/******************************************************
+ * run
+ * run program, starting at address of PROGADDR
+ * returns 1 if successful
+ * returns 0 if error exists 
+ * ****************************************************/
+int run();
 
 /******************************************************
  * updateHistory

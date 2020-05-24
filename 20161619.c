@@ -1669,7 +1669,7 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){ // 
         case SIO : break; 
         case SSK : break;
         case SVC : break;
-        case RD  :  CC='<'; break;
+        case RD  :  CC='='; break; // assuming no input is read by device
         case TD :   CC = '<'; break;
         case TIO :  REG[X]++; CC = '<'; break; // Device is always ready 
         case TIX :  REG[X]++; CC='<'; break;
@@ -1681,7 +1681,7 @@ void execute(long opcode, long targetAddress, int addressMode, int format ){ // 
                          CC = '>';
                      }
                      break;
-        case WD :  break;
+        case WD :   break; // move to next instruction
     }
     
 }
@@ -1764,16 +1764,16 @@ int run(){  // run program from progaddr
                 targetAddress += REG[B];  // add Base value to TA 
             }
         }
+        if(xbpe&0x8){ // Indexed 
+            targetAddress += REG[X];
+        }  
         // simple address is already calulcated. 
         switch(addressMode){ // update TA according to address mode 
             case 0 :  targetAddress = fetchMemory(address,5) & 0x7FFF; break; // SIC
             case 1 :  break; // Immediate address
             case 2 :  targetAddress = fetchMemory(targetAddress,6); break; // Indirect
             case 3 :  break;  // simple address 
-        }
-        if(xbpe&0x8){ // Indexed 
-            targetAddress += REG[X];
-        }        
+        }      
      }
      execute(opcode,targetAddress,addressMode,format);  // execute instruction
      address = REG[PC];  // update address to PC register value 
