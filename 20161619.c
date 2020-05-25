@@ -307,7 +307,7 @@ void printMem(long start, long end){
         }
         printf("; ");
         for (j = i; j < i + 16; j++){
-            if (VMemory[j] >= 20 && VMemory[j] <= 0x7E &&  j >= start) // if the value is within the range
+            if (VMemory[j] >= 0x20 && VMemory[j] <= 0x7E &&  j >= start) // if the value is within the range
                 printf("%c", VMemory[j]); // print out the memory in character value 
             else
                 printf("."); // print dot otherwise
